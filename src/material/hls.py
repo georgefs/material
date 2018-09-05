@@ -7,60 +7,60 @@ import copy
 import json
 
 class M3U8:
-    def __init__(self, headers, sences, base_url=""):
+    def __init__(self, headers, scenes, base_url=""):
         self.headers = headers 
-        self.sences = sences
+        self.scenes = scenes
         self.base_url = base_url
 
     def slince(self, st, ed):
         # slince hls
         result = {}
-        sences = []
+        scenes = []
         new_idx=0
-        for sence in copy.deepcopy(self.sences):
-            if sence['start'] + sence['duration'] > st and sence['start'] < ed:
-                sence['idx'] = new_idx
-                sences.append(sence)
+        for scene in copy.deepcopy(self.scenes):
+            if scene['start'] + scene['duration'] > st and scene['start'] < ed:
+                scene['idx'] = new_idx
+                scenes.append(scene)
                 new_idx += 1
 
         headers = self.headers
-        sences = sences
-        return M3U8(headers, sences, self.base_url)
+        scenes = scenes
+        return M3U8(headers, scenes, self.base_url)
 
     def select(self, idxs):
         idx = 0
         tmp = {}
 
-        for sence in copy.deepcopy(self.sences):
-            if sence['idx'] in idxs:
-                tmp[sence['idx']] = sence
+        for scene in copy.deepcopy(self.scenes):
+            if scene['idx'] in idxs:
+                tmp[scene['idx']] = scene
         
-        sences = []
+        scenes = []
         new_idx = 0
         for idx in idxs:
             if tmp.get(idx, None):
                 tmp[idx]['idx'] = new_idx
-                sences.append(tmp[idx])
+                scenes.append(tmp[idx])
                 new_idx += 1
-        return M3U8(self.headers, sences, self.base_url)
+        return M3U8(self.headers, scenes, self.base_url)
 
 
     def render(self, clear=False):
         base_url = self.base_url
         context = ""
         context += self.headers
-        sence_template = """
+        scene_template = """
 #EXTINF:{duration},{title}
 {file_path}
         """.strip() + "\n"
         
-        for sence in self.sences:
-            file_path = sence['file_path']
+        for scene in self.scenes:
+            file_path = scene['file_path']
             if clear:
                 file_path = file_path.split('/')[-1]
 
-            sence['file_path'] = file_path
-            context += sence_template.format(**sence)
+            scene['file_path'] = file_path
+            context += scene_template.format(**scene)
 
         context += "#EXT-X-ENDLIST"
         return context
@@ -80,7 +80,7 @@ class M3U8:
     def from_context(context, base_url=""):
         datas = re.split('(?=#EXTINF)', context)
         headers = datas[0]
-        sences = []
+        scenes = []
 
         # parse duration & title
         extinf = re.compile('^#EXTINF:([\d.]+),(.*)')
@@ -88,20 +88,20 @@ class M3U8:
         # parse ts file path
         ts = re.compile('\n([^#].*)')
 
-        raw_sences = datas[1:]
+        raw_scenes = datas[1:]
         st = 0
         idx = 0
-        for raw_sence in raw_sences:
-            duration, title = extinf.search(raw_sence).groups()
-            file_path = ts.search(raw_sence).groups()[0]
+        for raw_scene in raw_scenes:
+            duration, title = extinf.search(raw_scene).groups()
+            file_path = ts.search(raw_scene).groups()[0]
 
             file_path = urllib.parse.urljoin(base_url, file_path)
-            sence = {'title': title, 'duration': float(duration), "file_path":file_path, 'start': st, 'idx': idx}
-            sences.append(sence)
-            st+= sence['duration']
+            scene = {'title': title, 'duration': float(duration), "file_path":file_path, 'start': st, 'idx': idx}
+            scenes.append(scene)
+            st+= scene['duration']
             idx += 1
 
-        return M3U8.from_data(json.dumps({'headers': headers, 'sences': sences, 'base_url': base_url}))
+        return M3U8.from_data(json.dumps({'headers': headers, 'scenes': scenes, 'base_url': base_url}))
 
     def create_m3u8_file(self, path):
         with open(path, 'w+') as f:
@@ -111,14 +111,14 @@ class M3U8:
     def dump_data(self):
         data = {}
         data['headers'] = copy.deepcopy(self.headers)
-        data['sences'] = copy.deepcopy(self.sences)
+        data['scenes'] = copy.deepcopy(self.scenes)
         data['base_url'] = copy.deepcopy(self.base_url)
         return json.dumps(data)
 
     @staticmethod
     def from_data(data):
         data = json.loads(data)
-        return M3U8(data['headers'], data['sences'], data['base_url'])
+        return M3U8(data['headers'], data['scenes'], data['base_url'])
 
 
 

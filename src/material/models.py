@@ -45,5 +45,5 @@ class VideoScene(models.Model):
 
     def preview_images(self):
         m3u8 = self.m3u8
-        imgs = [v['file_path'] + ".jpg" for v in m3u8.sences]
+        imgs = [v['file_path'] + ".jpg" for v in m3u8.scenes]
         return imgs
