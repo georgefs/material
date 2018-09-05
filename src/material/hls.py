@@ -162,4 +162,10 @@ if __name__ == '__main__':
     print(new.render())
 
 def create_previews(hls_path, name_pattern="{}.jpg"):
-    pass
+    for root, folders, files in os.walk(hls_path):
+        for f in files:
+            filepath = os.path.join(root, f)
+            if filepath.endswith('.ts'):
+                cmd = "ffmpeg -i {} -vframes 1  {}".format(filepath, name_pattern.format(filepath))
+                os.system(cmd)
+                pass
