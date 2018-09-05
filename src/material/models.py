@@ -7,11 +7,25 @@ from django.conf import settings
 class Tag(models.Model):
     name = models.CharField(max_length=1024)
 
+
+    def __unicode__(self):
+        return self.name
+
+    def __str__(self):
+        return self.name
+
+
 class Video(models.Model):
     name = models.CharField(max_length=1024)
     info = models.TextField()
     meta = models.TextField()
     preview_url = models.URLField(null=True)
+
+    def __unicode__(self):
+        return self.name
+
+    def __str__(self):
+        return self.name
 
     @staticmethod
     def sync(name, m3u8_url):
@@ -38,6 +52,12 @@ class VideoScene(models.Model):
     preview_url = models.URLField(null=True)
     tags = models.ManyToManyField(Tag)
     meta = models.TextField()
+
+    def __unicode__(self):
+        return self.text
+
+    def __str__(self):
+        return self.text
 
     @property
     def m3u8(self):

@@ -32,7 +32,7 @@ class VideoSceneAdmin(admin.ModelAdmin):
         js = ('https://cdn.jsdelivr.net/npm/clappr@latest/dist/clappr.min.js',)
 
     list_display = ( 'id', 'tag_names', 'text', 'video__name', 'm3u8_url', 'duration', 'preview', 'mp4')
-    list_filter = ('video__name', )
+    list_filter = ('tags', 'video__name')
     def m3u8_url(self, obj):
         url =  reverse('scene_m3u8', kwargs={'vid':obj.id})
         return format_html("<a Target='_new' href='{}'>{}</a>".format(url, 'm3u8_url'))
