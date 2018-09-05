@@ -11,7 +11,7 @@ class VideoAdmin(admin.ModelAdmin):
     class Media:
         js = ('js/admin/mymodel.js',)
 
-    list_display = ( 'name', 'm3u8_url', 'preview', 'scenes' )
+    list_display = ( 'video_name', 'm3u8_url', 'preview', 'scenes' )
 
     def m3u8_url(self, obj):
         url = reverse('video_m3u8', kwargs={'vid':obj.id})
@@ -26,12 +26,18 @@ class VideoAdmin(admin.ModelAdmin):
         url += "?video__name={}".format(obj.name)
         return format_html("<a Target='_self' href='{}'>{}</a>".format(url, 'scenes'))
 
+    def video_name(self, obj):
+        meta = json.loads(obj.meta)
+        return "{type}-{section} {left} {left_score}:{right_score} {right}".format(**meta)
+
+
 
 class VideoSceneAdmin(admin.ModelAdmin):
     class Media:
         js = ('https://cdn.jsdelivr.net/npm/clappr@latest/dist/clappr.min.js',)
 
-    list_display = ( 'id', 'tag_names', 'text', 'video__name', 'm3u8_url', 'duration', 'preview', 'mp4')
+    list_display = ( 'id', 'tag_names', 'text', 'video__name', 'm3u8_url', 'preview', 'mp4')
+
     list_filter = ('tags', 'video__name')
     def m3u8_url(self, obj):
         url =  reverse('scene_m3u8', kwargs={'vid':obj.id})
@@ -47,7 +53,7 @@ class VideoSceneAdmin(admin.ModelAdmin):
         return obj.video.name
 
     def mp4(self, obj):
-        url = "http://130.211.252.81/{}.mp4".format(obj.id)
+        url = "http://35.229.199.4/{}.mp4".format(obj.id)
         return format_html("<a Target='_new' href='{}'>{}</a>".format(url, 'mp4'))
 
     def duration(self, obj):
