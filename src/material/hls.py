@@ -6,9 +6,10 @@ import os
 import copy
 import json
 
+
 class M3U8:
     def __init__(self, headers, scenes, base_url=""):
-        self.headers = headers 
+        self.headers = headers
         self.scenes = scenes
         self.base_url = base_url
 
@@ -16,7 +17,7 @@ class M3U8:
         # slince hls
         result = {}
         scenes = []
-        new_idx=0
+        new_idx = 0
         for scene in copy.deepcopy(self.scenes):
             if scene['start'] + scene['duration'] > st and scene['start'] < ed:
                 scene['idx'] = new_idx
@@ -34,7 +35,7 @@ class M3U8:
         for scene in copy.deepcopy(self.scenes):
             if scene['idx'] in idxs:
                 tmp[scene['idx']] = scene
-        
+
         scenes = []
         new_idx = 0
         for idx in idxs:
@@ -44,7 +45,6 @@ class M3U8:
                 new_idx += 1
         return M3U8(self.headers, scenes, self.base_url)
 
-
     def render(self, clear=False):
         base_url = self.base_url
         context = ""
@@ -53,7 +53,7 @@ class M3U8:
 #EXTINF:{duration},{title}
 {file_path}
         """.strip() + "\n"
-        
+
         for scene in self.scenes:
             file_path = scene['file_path']
             if clear:
@@ -96,9 +96,9 @@ class M3U8:
             file_path = ts.search(raw_scene).groups()[0]
 
             file_path = urllib.parse.urljoin(base_url, file_path)
-            scene = {'title': title, 'duration': float(duration), "file_path":file_path, 'start': st, 'idx': idx}
+            scene = {'title': title, 'duration': float(duration), "file_path": file_path, 'start': st, 'idx': idx}
             scenes.append(scene)
-            st+= scene['duration']
+            st += scene['duration']
             idx += 1
 
         return M3U8.from_data(json.dumps({'headers': headers, 'scenes': scenes, 'base_url': base_url}))
@@ -121,27 +121,27 @@ class M3U8:
         return M3U8(data['headers'], data['scenes'], data['base_url'])
 
 
-
 def create_path(path):
     try:
         os.makedirs(path)
     except:
         pass
 
-# todo
+
 def download(url, output_path):
     create_path(output_path)
     cmd = "ffmpeg -protocol_whitelist \"file,http,https,tcp,tls\" -i {url} -f hls {output_path}".format(url=url, output_path=output_path)
     os.system(cmd)
     return output_path
 
-# todo
+
 def download_to_mp4(m3u8, output_path):
     m3u8_path = urllib.parse.urljoin(output_path, "video.m3u8")
     m3u8.create_m3u8_file(m3u8_path)
     cmd = "ffmpeg -protocol_whitelist \"file,http,https,tcp,tls\" -i \"{m3u8_path}\" -c copy {output_path}".format(m3u8_path=m3u8_path, output_path=output_path)
     os.system(cmd)
     return output_path
+
 
 def download_from_mp4(source_url, output_path):
     create_path(output_path)
@@ -150,16 +150,11 @@ def download_from_mp4(source_url, output_path):
     os.system(cmd)
     return output_path
 
+
 def to_hls(source, dist):
     cmd = "ffmpeg -i {source}  -profile:v baseline -level 3.0 -s 640x360 -start_number 0 -hls_list_size 0 -f hls {dist}/video.m3u8".format(source=source, dist=dist)
     os.system(cmd)
 
-if __name__ == '__main__':
-    url = 'http://35.192.13.0:8000/J1神户1-0柏/video.m3u8'
-    m3u8 = M3U8.from_url('http://35.192.13.0:8000/J1%E7%A5%9E%E6%88%B71-0%E6%9F%8F/video.m3u8')
-    min_m3u8 = m3u8.slince(50, 100)
-    new = m3u8.select([2,3,5,8,9])
-    print(new.render())
 
 def create_previews(hls_path, name_pattern="{}.jpg"):
     for root, folders, files in os.walk(hls_path):
@@ -168,4 +163,3 @@ def create_previews(hls_path, name_pattern="{}.jpg"):
             if filepath.endswith('.ts'):
                 cmd = "ffmpeg -i {} -vframes 1  {}".format(filepath, name_pattern.format(filepath))
                 os.system(cmd)
-                pass

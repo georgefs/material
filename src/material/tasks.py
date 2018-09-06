@@ -1,9 +1,3 @@
-#! /usr/bin/env python
-# -*- coding: utf-8 -*-
-#
-# Copyright © 2018 lizongzhe 
-#
-# Distributed under terms of the MIT license.
 import tempfile
 
 def download():
@@ -17,5 +11,3 @@ def create_object():
 
 def upload():
     pass
-
-

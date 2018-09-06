@@ -18,52 +18,54 @@ def video_m3u8(request, vid):
 
     return HttpResponse(obj.render())
 
+
 def scene_m3u8(request, vid):
     obj = VideoScene.objects.get(pk=vid).m3u8
     return HttpResponse(obj.render())
 
+
 def video_preview(request, vid):
-    m3u8_url = reverse('video_m3u8', kwargs={'vid':vid})
+    m3u8_url = reverse('video_m3u8', kwargs={'vid': vid})
     return preview(m3u8_url)
 
+
 def scene_preview(request, vid):
-    m3u8_url = reverse('scene_m3u8', kwargs={'vid':vid})
+    m3u8_url = reverse('scene_m3u8', kwargs={'vid': vid})
     return preview(m3u8_url)
+
 
 def preview(m3u8_url):
     template = '''
     <head>
-	<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clappr@latest/dist/clappr.min.js"></script>
+        <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clappr@latest/dist/clappr.min.js"></script>
     </head>
 
     <body>
-	<div id="player"></div>
-	<script>
+        <div id="player"></div>
+        <script>
 var player = new Clappr.Player({{source: "{m3u8_url}", parentId: "#player"}});
-	</script>
+        </script>
     </body>
 '''
     return HttpResponse(template.format(m3u8_url=m3u8_url))
-
 
 
 def scene_preview_images(request, vid):
     template = '<img src="{}" width="200px">'
     obj = VideoScene.objects.get(pk=vid)
     images = obj.preview_images()
-    m3u8_url = reverse('scene_m3u8', kwargs={'vid':vid})
+    m3u8_url = reverse('scene_m3u8', kwargs={'vid': vid})
 
     html = '''<head>
-	<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clappr@latest/dist/clappr.min.js"></script>
+        <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clappr@latest/dist/clappr.min.js"></script>
     </head>'''
-
 
     html += '''
     <body>
-	<div id="player"></div>
-	<script>
+        <div id="player"></div>
+        <script>
 var player = new Clappr.Player({{source: "{m3u8_url}", parentId: "#player"}});
-	</script>
+        </script>
     </body>
     '''.format(m3u8_url=m3u8_url)
 

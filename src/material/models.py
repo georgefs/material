@@ -4,9 +4,9 @@ from django.conf import settings
 
 # Create your models here.
 
+
 class Tag(models.Model):
     name = models.CharField(max_length=1024)
-
 
     def __unicode__(self):
         return self.name
@@ -43,6 +43,7 @@ class Video(models.Model):
     def load_info(self, m3u8_url):
         m3u8 = M3U8.from_url(m3u8_url)
         self.info = m3u8.dump_data()
+
 
 class VideoScene(models.Model):
     video = models.ForeignKey(Video, on_delete=models.CASCADE)
