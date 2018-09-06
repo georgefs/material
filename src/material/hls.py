@@ -17,12 +17,9 @@ class M3U8:
         # slince hls
         result = {}
         scenes = []
-        new_idx = 0
         for scene in copy.deepcopy(self.scenes):
             if scene['start'] + scene['duration'] > st and scene['start'] < ed:
-                scene['idx'] = new_idx
                 scenes.append(scene)
-                new_idx += 1
 
         headers = self.headers
         scenes = scenes
@@ -49,6 +46,8 @@ class M3U8:
         base_url = self.base_url
         context = ""
         context += self.headers
+        context = re.sub('#EXT-X-MEDIA-SEQUENCE:\d+', '#EXT-X-MEDIA-SEQUENCE:{}'.format(self.scenes[0]['idx']), context)
+
         scene_template = """
 #EXTINF:{duration},{title}
 {file_path}
