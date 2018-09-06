@@ -29,8 +29,11 @@ class VideoAdmin(admin.ModelAdmin):
         return format_html("<a Target='_self' href='{}'>{}</a>".format(url, 'scenes'))
 
     def video_name(self, obj):
-        meta = json.loads(obj.meta)
-        return "{type}-{section} {left} {left_score}:{right_score} {right}".format(**meta)
+        meta = json.loads(obj.meta.strip() or '{}')
+        if meta.get('type', '' ) == 'J1':
+            return "{type}-{section} {left} {left_score}:{right_score} {right}".format(**meta)
+        else:
+            return obj.name
 
 
 class VideoSceneAdmin(admin.ModelAdmin):
