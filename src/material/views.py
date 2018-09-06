@@ -8,6 +8,14 @@ from django.http import HttpResponse
 
 def video_m3u8(request, vid):
     obj = Video.objects.get(pk=vid).m3u8
+
+    # format st_second~ed_second(int:int)
+    duration = request.GET.get('duration', None)
+    if duration:
+        st, ed = duration.split('~')
+        st, ed = int(st), int(ed)
+        obj = obj.slince(st, ed)
+
     return HttpResponse(obj.render())
 
 def scene_m3u8(request, vid):
