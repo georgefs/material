@@ -13,7 +13,7 @@ class VideoAdmin(admin.ModelAdmin):
     class Media:
         js = ('js/admin/mymodel.js',)
 
-    list_display = ('video_name', 'm3u8_url', 'preview', 'scenes')
+    list_display = ('video_name', 'm3u8_url', 'preview', 'scenes', 'streaming_url')
 
     def m3u8_url(self, obj):
         url = reverse('video_m3u8', kwargs={'vid': obj.id})
@@ -34,6 +34,12 @@ class VideoAdmin(admin.ModelAdmin):
             return "{type}-{section} {left} {left_score}:{right_score} {right}".format(**meta)
         else:
             return obj.name
+
+    def streaming_url(self, obj):
+        url = reverse('video_streaming_m3u8', kwargs={'vid': obj.id})
+        query = "?start_time=2018-09-01T00:00:00&cycle_seconds=7200"
+        url += query
+        return format_html("<a Target='_self' href='{}'>{}</a>".format(url, 'streaming_url'))
 
 
 class VideoSceneAdmin(admin.ModelAdmin):
