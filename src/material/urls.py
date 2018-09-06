@@ -23,4 +23,5 @@ urlpatterns = [
     re_path('scene/(?P<vid>\d+)/preview_images', views.scene_preview_images, name="scene_preview_images"),
     re_path('video/(?P<vid>\d+)/preview', views.video_preview, name="video_preview"),
     re_path('scene/(?P<vid>\d+)/preview', views.scene_preview, name="scene_preview"),
+    re_path('video/streaming/(?P<vid>\d+).m3u8', views.video_streaming_m3u8, name="video_streaming_m3u8"),
 ]

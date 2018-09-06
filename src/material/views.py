@@ -2,8 +2,28 @@ from django.shortcuts import render
 from .models import Video, VideoScene
 from django.urls import reverse
 from django.http import HttpResponse
+from datetime import datetime
 
 # Create your views here.
+
+def video_streaming_m3u8(request, vid):
+    time_format = "%Y-%m-%dT%H:%M:%S"
+    start_time = request.GET.get('start_time', None)
+    cycle_seconds = int(request.GET.get('cycle_seconds', '3600')) # default 2hr
+    buffer_seconds = int(request.GET.get('buffer_seconds', '300')) # default 300 sec
+
+    start_time = datetime.strptime(start_time, time_format)
+
+    obj = Video.objects.get(pk=vid).m3u8
+    now = datetime.now()
+    delta_time = (now - start_time).total_seconds()
+    current_streaming_seconds = delta_time % cycle_seconds
+
+    if delta_time > 0:
+        obj = obj.slince(current_streaming_seconds - buffer_seconds, current_streaming_seconds)
+        return HttpResponse(obj.render(end=False))
+    else:
+        return HttpResponse('')
 
 
 def video_m3u8(request, vid):

@@ -45,7 +45,7 @@ class M3U8:
                 new_idx += 1
         return M3U8(self.headers, scenes, self.base_url)
 
-    def render(self, clear=False):
+    def render(self, clear=False, end=True):
         base_url = self.base_url
         context = ""
         context += self.headers
@@ -62,7 +62,8 @@ class M3U8:
             scene['file_path'] = file_path
             context += scene_template.format(**scene)
 
-        context += "#EXT-X-ENDLIST"
+        if end:
+            context += "#EXT-X-ENDLIST"
         return context
 
     @staticmethod
