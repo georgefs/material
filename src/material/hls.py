@@ -46,7 +46,8 @@ class M3U8:
         base_url = self.base_url
         context = ""
         context += self.headers
-        context = re.sub('#EXT-X-MEDIA-SEQUENCE:\d+', '#EXT-X-MEDIA-SEQUENCE:{}'.format(self.scenes[0]['idx']), context)
+        if self.scenes:
+            context = re.sub('#EXT-X-MEDIA-SEQUENCE:\d+', '#EXT-X-MEDIA-SEQUENCE:{}'.format(self.scenes[0]['idx']), context)
 
         scene_template = """
 #EXTINF:{duration},{title}

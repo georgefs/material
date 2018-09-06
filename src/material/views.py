@@ -9,7 +9,7 @@ from datetime import datetime
 def video_streaming_m3u8(request, vid):
     time_format = "%Y-%m-%dT%H:%M:%S"
     start_time = request.GET.get('start_time', None)
-    cycle_seconds = int(request.GET.get('cycle_seconds', '3600')) # default 2hr
+    cycle_seconds = int(request.GET.get('cycle_seconds', '0')) # default 0
     buffer_seconds = int(request.GET.get('buffer_seconds', '300')) # default 300 sec
 
     start_time = datetime.strptime(start_time, time_format)
@@ -17,7 +17,10 @@ def video_streaming_m3u8(request, vid):
     obj = Video.objects.get(pk=vid).m3u8
     now = datetime.now()
     delta_time = (now - start_time).total_seconds()
-    current_streaming_seconds = delta_time % cycle_seconds
+    if cycle_seconds:
+        current_streaming_seconds = delta_time % cycle_seconds
+    else:
+        current_streaming_seconds = delta_time
 
     if delta_time > 0:
         obj = obj.slince(current_streaming_seconds - buffer_seconds, current_streaming_seconds)
