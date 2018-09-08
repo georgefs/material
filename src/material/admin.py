@@ -39,6 +39,8 @@ class VideoAdmin(admin.ModelAdmin):
         url = reverse('video_preview', kwargs={'vid': obj.id})
         html += "<a Target='_new' href='{}'>{}</a><br/>".format(url, 'preview')
         url = reverse('video_streaming_m3u8', kwargs={'vid': obj.id})
+        query = "?start_time=2018-09-01T00:00:00&cycle_seconds=7200"
+        url += query
         html += "<a Target='_new' href='{}'>{}</a>".format(url, 'streaming_url')
         return format_html(html)
 
