@@ -44,6 +44,18 @@ class Video(models.Model):
         m3u8 = M3U8.from_url(m3u8_url)
         self.info = m3u8.dump_data()
 
+    def slince(self, text, start, end, meta={}, tags=[]):
+        scene = VideoScene.objects.create(
+            video=self,
+            text=text,
+            start=start,
+            end=end,
+            meta=meta
+        )
+        for tag in tags:
+            scene.tags
+            scene.add(tag)
+        return scene
 
 class VideoScene(models.Model):
     video = models.ForeignKey(Video, on_delete=models.CASCADE)

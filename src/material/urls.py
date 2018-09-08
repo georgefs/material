@@ -16,12 +16,14 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, re_path
 from . import views
+from django.contrib.auth.decorators import login_required
 
 urlpatterns = [
     re_path('video/(?P<vid>\d+).m3u8', views.video_m3u8, name="video_m3u8"),
     re_path('scene/(?P<vid>\d+).m3u8', views.scene_m3u8, name="scene_m3u8"),
-    re_path('scene/(?P<vid>\d+)/preview_images', views.scene_preview_images, name="scene_preview_images"),
     re_path('video/(?P<vid>\d+)/preview', views.video_preview, name="video_preview"),
+    re_path('video/(?P<vid>\d+)/slince', login_required(views.VideoSlinceView.as_view()), name="video_slince"),
+    re_path('scene/(?P<vid>\d+)/edit', login_required(views.SceneEditorView.as_view()), name="scene_edit"),
     re_path('scene/(?P<vid>\d+)/preview', views.scene_preview, name="scene_preview"),
     re_path('video/streaming/(?P<vid>\d+).m3u8', views.video_streaming_m3u8, name="video_streaming_m3u8"),
 ]
