@@ -144,7 +144,7 @@ class SceneEditorView(View):
     def get(self, request, vid):
         v = VideoScene.objects.get(pk=vid)
 
-        template = '<img src="{}" width="200px">'
+        template = '<a href="#" onclick="player.seek({});"><img src="{}" width="200px">'
         obj = VideoScene.objects.get(pk=vid)
         images = obj.preview_images()
         m3u8_url = reverse('scene_m3u8', kwargs={'vid': vid})
@@ -180,8 +180,11 @@ class SceneEditorView(View):
         '''.format(m3u8_url=m3u8_url, st=v.start, ed=v.end, base=v.m3u8.scenes[0]['start'], csrf=csrf.get_token(request))
 
         html += '<div>{}</div>\n'.format(obj.text)
-        for img in images:
-            html += template.format(img)
+        start = 0
+        for scene in obj.m3u8.scenes:
+            img = "{}.jpg".format(scene['file_path'])
+            html += template.format(start, img)
+            start += scene['duration']
 
         return HttpResponse(html)
     @csrf_exempt
