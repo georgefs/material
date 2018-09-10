@@ -44,7 +44,7 @@ class Video(models.Model):
         m3u8 = M3U8.from_url(m3u8_url)
         self.info = m3u8.dump_data()
 
-    def slince(self, text, start, end, meta={}, tags=[]):
+    def slice(self, text, start, end, meta={}, tags=[]):
         scene = VideoScene.objects.create(
             video=self,
             text=text,
@@ -74,7 +74,7 @@ class VideoScene(models.Model):
 
     @property
     def m3u8(self):
-        return self.video.m3u8.slince(self.start, self.end)
+        return self.video.m3u8.slice(self.start, self.end)
 
     def preview_images(self):
         m3u8 = self.m3u8

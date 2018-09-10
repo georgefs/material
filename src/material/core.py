@@ -38,5 +38,6 @@ def create_video_from_url(name, url):
     to_hls(target_path, target_hls_path)
     make_previews(target_hls_path)
     upload(target_hls_path, video.default_folder)
+    os.rmdir(tempfolder)
     video.load_info(m3u8_url)
     video.save()

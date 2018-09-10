@@ -27,9 +27,8 @@ def video_streaming_m3u8(request, vid):
         current_streaming_seconds = delta_time % cycle_seconds
     else:
         current_streaming_seconds = delta_time
-
     if delta_time > 0:
-        obj = obj.slince(current_streaming_seconds - buffer_seconds, current_streaming_seconds)
+        obj = obj.slice(current_streaming_seconds - buffer_seconds, current_streaming_seconds)
         return HttpResponse(obj.render(end=False))
     else:
         return HttpResponse('')
@@ -40,10 +39,16 @@ def video_m3u8(request, vid):
 
     # format st_second~ed_second(int:int)
     duration = request.GET.get('duration', None)
+    idxs = request.GET.get('idxs', None)
     if duration:
         st, ed = duration.split('~')
         st, ed = float(st), float(ed)
-        obj = obj.slince(st, ed)
+        obj = obj.slice(st, ed)
+    elif idxs:
+        idxs = idxs.split(',')
+        idxs = [int(i) for i in idxs if i.strip()]
+        obj = obj.select(idxs)
+
 
     return HttpResponse(obj.render())
 
@@ -135,7 +140,7 @@ class VideoSlinceView(View):
         meta = request.POST.get('meta', '{}')
         text = request.POST.get('text', '')
         v = Video.objects.get(pk=vid)
-        scene = v.slince(text, st, ed, meta,)
+        scene = v.slice(text, st, ed, meta,)
 
         return redirect('scene_edit', vid=scene.id)
 

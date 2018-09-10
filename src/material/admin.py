@@ -13,7 +13,7 @@ class VideoAdmin(admin.ModelAdmin):
     class Media:
         js = ('js/admin/mymodel.js',)
 
-    list_display = ('video_name', 'slince', 'links', 'scenes')
+    list_display = ('video_name', 'slice', 'links', 'scenes')
 
     def scenes(self, obj):
         url = reverse('admin:material_videoscene_changelist')
@@ -27,9 +27,9 @@ class VideoAdmin(admin.ModelAdmin):
         else:
             return obj.name
 
-    def slince(self, obj):
-        url = reverse('video_slince', kwargs={'vid': obj.id})
-        return format_html("<a Target='_new' href='{}'>{}</a>".format(url, 'slince'))
+    def slice(self, obj):
+        url = reverse('video_slice', kwargs={'vid': obj.id})
+        return format_html("<a Target='_new' href='{}'>{}</a>".format(url, 'slice'))
 
 
     def links(self, obj):
@@ -60,8 +60,11 @@ class VideoSceneAdmin(admin.ModelAdmin):
         return format_html("<a Target='_new' href='{}'>{}</a>".format(url, 'edit'))
 
     def video__name(self, obj):
-        meta = json.loads(obj.video.meta)
-        return "{left} {left_score}:{right_score} {right}".format(**meta)
+        try:
+            meta = json.loads(obj.video.meta)
+            return "{left} {left_score}:{right_score} {right}".format(**meta)
+        except:
+            return obj.text
 
     def mp4(self, obj):
         url = "http://35.229.199.4/{}.mp4".format(obj.id)

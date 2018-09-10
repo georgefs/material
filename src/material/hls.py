@@ -13,8 +13,8 @@ class M3U8:
         self.scenes = scenes
         self.base_url = base_url
 
-    def slince(self, st, ed):
-        # slince hls
+    def slice(self, st, ed):
+        # slice hls
         result = {}
         scenes = []
         for scene in copy.deepcopy(self.scenes):
