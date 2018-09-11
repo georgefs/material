@@ -72,7 +72,7 @@ name| description
 ---|---
 Video| 原影片資訊
 VideoScene| 影片切片資訊
-Tag| 影片切片標籤
+Tag| 標籤
 
 功能描述
 ---
