@@ -89,7 +89,7 @@ name| path|method| params| description
 ---|---|---|---|---
 video_m3u8| `/material/video/{video id}.m3u8`| get| `duration={start:%Y-%m-%dT%H:%M:%S}~{end:%Y-%m-%dT%H:%M:%S}`| 動態生成  video m3u8 檔案
 video_streaming_m3u8| `/material/video/{video id}.m3u8`| get | `start_time={直撥開始時間:%Y-%m-%dT%H:%M:%S}`, `cycle_seconds={重播週期秒數: int}`, `buffer_seconds={m3u8 緩衝秒數: int}`| 動態模擬video streaming
-video_get| `/material/video/{video id}`|get|none| 取得影片m3u8 的資訊, 方便在處理
+video_get| `/material/video/{video id}`|get|none| 取得影片m3u8 的資訊, 方便再處理
 video_create| `/material/video`| post| url={video_url: string}| 新增影片
 video_slice| `/material/video/{video id}/slice`| post| `tag={tag_id:int}, duration={start second~end second}, text={內文string}`| 切片段
 
