@@ -86,12 +86,12 @@ Tag| 影片切片標籤
 
 name| path|method| params| description
 ---|---|---|---|---
-video_m3u8| /material/video/{video id}.m3u8| get| duration={start:%Y-%m-%dT%H:%M:%S}~{end:%Y-%m-%dT%H:%M:%S}| 動態生成  video m3u8 檔案
-video_streaming_m3u8| /material/video/{video id}.m3u8| get | start_time={直撥開始時間:%Y-%m-%dT%H:%M:%S}, cycle_seconds={重播週期秒數: int}, buffer_seconds={m3u8 緩衝秒數: int}| 動態模擬video streaming
+video_m3u8| `/material/video/{video id}.m3u8`| get| `duration={start:%Y-%m-%dT%H:%M:%S}~{end:%Y-%m-%dT%H:%M:%S}`| 動態生成  video m3u8 檔案
+video_streaming_m3u8| `/material/video/{video id}.m3u8`| get | `start_time={直撥開始時間:%Y-%m-%dT%H:%M:%S}`, `cycle_seconds={重播週期秒數: int}`, `buffer_seconds={m3u8 緩衝秒數: int}`| 動態模擬video streaming
 
 #### VideoScene
 名稱| path|method| params| description
 ---|---|---|---|---
-scene_m3u8| scene/{video id}.m3u8|get|none| 影面切片m3u8
+scene_m3u8| `scene/{video id}.m3u8`|get|none| 影面切片m3u8
 
 
