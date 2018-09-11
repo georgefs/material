@@ -99,4 +99,4 @@ video_slice| `/material/video/{video id}/slice`| post| `tag={tag_id:int}, durati
 scene_m3u8| `/material/scene/{scene id}.m3u8`|get|none| 影面切片m3u8
 
 #### Tag
-
+restful crud
