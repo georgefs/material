@@ -43,6 +43,7 @@ hls 基本上是維護一個 m3u8 的 index file
 #EXTM3U                   // 開頭
 #EXT-X-VERSION:3          // 版本設定
 #EXT-X-TARGETDURATION:10  // 定義每個分片的最大長度
+#EXT-X-MEDIA-SEQUENCE:0   // 影片index, 用在streaming 模式底下串接使用
 #EXTINF:10.000000,        // 定義ts 檔案長度, title
 video0.ts                 // ts 檔案的位置
 #EXTINF:6.560000,
