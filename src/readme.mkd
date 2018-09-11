@@ -3,14 +3,30 @@ material
 
 序
 ---
-簡單 video 前處理流程, 用原本的mp4 來處理有一些問題
-1. 大檔案下載時間過長
-2. 大檔案切片需要歷遍全部
-3. 素材要反覆切片, 而且會重複儲存
-4. 使用者體驗問題.. 
+這部分是為了影片再處理設計, 
+剪輯影片過程時常花很多的時間在處理影像轉黨和切段落以及合併的問題
+每次花在這方面的時間都很長, 而且難以重複利用, 畢竟每次需要的片段都不一樣, 所以都需要重新剪輯... 
+在這剪接的過程當中無形了損耗大量的時間, 還有大量的資源..  才會進一步思考影片的前處理, 方便後續的影像編輯..
 
-原則上就是操作完整video 檔案需要的時間和資源都比較多...
-所以未來可以考慮採用hls 的影片形式來處理...
+功能目標
+---
+1. 快速切片
+2. 快速預覽
+3. 省頻寬
+4. 節省系統資源 
+5. 部署容易
+
+主要技術解說
+---
+基於以上目標, 決定採用http live streaming 的技術, 
+主要是由m3u8 的index 檔案和 ts 影像分片所組成.. 
+是apple 設計於做影像串流的技術, 最大的好處就是他不是真實的即時串流
+他是用http request 所組成, 所以不需要架設streaming server, 只需要部署靜態檔案伺服器
+也很容易用cdn 來擴充
+而且由於他是用 m3u8 做index 來串接影片, 所以在做分片的時候也僅需要修改m3u8 的檔案就可以
+達到分片的效果, 不用即時把整個影片讀取再切片.. 壞處就是一開始切片的段落就固定, 所以切片
+的精度就沒有到100%準確, 但是屬於可以接受的範圍知道
+另外就是 hls 和一般串流不同, 因為他是切分直播視訊, 所以秒差最少為單ts 檔案的時間
 
 hls
 ---
@@ -37,4 +53,45 @@ video2.ts
 video3.ts
 #EXT-X-ENDLIST            // 結尾
 ```
+
+大流程
+---
+1. 下載 video 檔案
+2. video 檔案轉檔成 hls 的格式
+3. 建立 ts 的預覽圖片
+4. 上傳到gcs or s3 ... static object storage service
+5. parse m3u8 into django model
+6. 根據參數動態生成 m3u8 檔案
+7. m3u8 player 使用不同參數的m3u8 檔案來預覽片段
+
+
+model 定義
+---
+name| description
+---|---
+Video| 原影片資訊
+VideoScene| 影片切片資訊
+Tag| 影片切片標籤
+
+功能描述
+---
+### admin
+1. 上傳影片連結
+2. Video 簡易切片功能
+3. VideoScene 簡易調整功能
+4. WebHook 設定通知新增Video 事件
+
+### api
+#### Video
+
+name| path|method| params| description
+---|---|---|---|---
+video_m3u8| /material/video/{video id}.m3u8| get| duration={start:%Y-%m-%dT%H:%M:%S}~{end:%Y-%m-%dT%H:%M:%S}| 動態生成  video m3u8 檔案
+video_streaming_m3u8| /material/video/{video id}.m3u8| get | start_time={直撥開始時間:%Y-%m-%dT%H:%M:%S}, cycle_seconds={重播週期秒數: int}, buffer_seconds={m3u8 緩衝秒數: int}| 動態模擬video streaming
+
+#### VideoScene
+名稱| path|method| params| description
+---|---|---|---|---
+scene_m3u8| scene/{video id}.m3u8|get|none| 影面切片m3u8
+
 
