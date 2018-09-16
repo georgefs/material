@@ -6,7 +6,8 @@ material
 這部分是為了影片再處理設計, 
 剪輯影片過程時常花很多的時間在處理影像轉黨和切段落以及合併的問題
 每次花在這方面的時間都很長, 而且難以重複利用, 畢竟每次需要的片段都不一樣, 所以都需要重新剪輯... 
-在這剪接的過程當中無形了損耗大量的時間, 還有大量的資源..  才會進一步思考影片的前處理, 方便後續的影像編輯..
+在這剪接的過程當中無形了損耗大量的時間, 還有大量的資源..  才會進一步思考影片的前處理, 方便後續的影像合成..
+還有建立素材的索引, 方便後續查詢再使用
 
 功能目標
 ---
@@ -22,11 +23,11 @@ material
 主要是由m3u8 的index 檔案和 ts 影像分片所組成.. 
 是apple 設計於做影像串流的技術, 最大的好處就是他不是真實的即時串流
 他是用http request 所組成, 所以不需要架設streaming server, 只需要部署靜態檔案伺服器
-也很容易用cdn 來擴充
-而且由於他是用 m3u8 做index 來串接影片, 所以在做分片的時候也僅需要修改m3u8 的檔案就可以
+也很容易用cdn 來擴充, 而且由於是小檔案切片, 所以附載也小了很多
+並且由於他是用 m3u8 做index 來串接影片, 所以在做分片的時候也僅需要修改m3u8 的檔案就可以
 達到分片的效果, 不用即時把整個影片讀取再切片.. 壞處就是一開始切片的段落就固定, 所以切片
 的精度就沒有到100%準確, 但是屬於可以接受的範圍知道
-另外就是 hls 和一般串流不同, 因為他是切分直播視訊, 所以秒差最少為單ts 檔案的時間
+另外就是 hls 和一般串流不同, 因為他是切分直播視訊, 所以直撥的秒差最少為單ts檔案的時間
 
 hls
 ---
@@ -43,6 +44,7 @@ hls 基本上是維護一個 m3u8 的 index file
 #EXTM3U                   // 開頭
 #EXT-X-VERSION:3          // 版本設定
 #EXT-X-TARGETDURATION:10  // 定義每個分片的最大長度
+#EXT-X-MEDIA-SEQUENCE:0   // 影片index, 用在streaming 模式底下串接使用
 #EXTINF:10.000000,        // 定義ts 檔案長度, title
 video0.ts                 // ts 檔案的位置
 #EXTINF:6.560000,
@@ -71,7 +73,7 @@ name| description
 ---|---
 Video| 原影片資訊
 VideoScene| 影片切片資訊
-Tag| 影片切片標籤
+Tag| 標籤
 
 功能描述
 ---
@@ -86,12 +88,16 @@ Tag| 影片切片標籤
 
 name| path|method| params| description
 ---|---|---|---|---
-video_m3u8| /material/video/{video id}.m3u8| get| duration={start:%Y-%m-%dT%H:%M:%S}~{end:%Y-%m-%dT%H:%M:%S}| 動態生成  video m3u8 檔案
-video_streaming_m3u8| /material/video/{video id}.m3u8| get | start_time={直撥開始時間:%Y-%m-%dT%H:%M:%S}, cycle_seconds={重播週期秒數: int}, buffer_seconds={m3u8 緩衝秒數: int}| 動態模擬video streaming
+video_m3u8| `/material/video/{video id}.m3u8`| get| `duration={start:%Y-%m-%dT%H:%M:%S}~{end:%Y-%m-%dT%H:%M:%S}`| 動態生成  video m3u8 檔案
+video_streaming_m3u8| `/material/video/{video id}.m3u8`| get | `start_time={直撥開始時間:%Y-%m-%dT%H:%M:%S}`, `cycle_seconds={重播週期秒數: int}`, `buffer_seconds={m3u8 緩衝秒數: int}`| 動態模擬video streaming
+video_get| `/material/video/{video id}`|get|none| 取得影片m3u8 的資訊, 方便再處理
+video_create| `/material/video`| post| url={video_url: string}| 新增影片
+video_slice| `/material/video/{video id}/slice`| post| `tag={tag_id:int}, duration={start second~end second}, text={內文string}`| 切片段
 
 #### VideoScene
 名稱| path|method| params| description
 ---|---|---|---|---
-scene_m3u8| scene/{video id}.m3u8|get|none| 影面切片m3u8
+scene_m3u8| `/material/scene/{scene id}.m3u8`|get|none| 影面切片m3u8
 
-
+#### Tag
+restful crud
