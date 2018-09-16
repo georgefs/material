@@ -63,13 +63,16 @@ def video_preview(request, vid):
 
     template = '''
     <head>
-        <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clappr@latest/dist/clappr.min.js"></script>
+            <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clappr@latest/dist/clappr.min.js"></script>
+            <script>window.clappr = Clappr;</script>
+            <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clappr-playback-rate-plugin@0.4.0/lib/clappr-playback-rate-plugin.min.js"></script>
+            <script>window.PlaybackRatePlugin = window['clappr-playback-rate-plugin'].default</script>
     </head>
 
     <body>
         <div id="player"></div>
         <script>
-             var player = new Clappr.Player({{source: "{m3u8_url}", parentId: "#player"}});
+                 var player = new Clappr.Player({{source: "{m3u8_url}", parentId: "#player", plugins: {{'core': [PlaybackRatePlugin]}}}});
         </script>
     </body>
     '''
@@ -81,13 +84,17 @@ def scene_preview(request, vid):
 
     template = '''
     <head>
-        <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clappr@latest/dist/clappr.min.js"></script>
+            <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clappr@latest/dist/clappr.min.js"></script>
+            <script>window.clappr = Clappr;</script>
+            <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clappr-playback-rate-plugin@0.4.0/lib/clappr-playback-rate-plugin.min.js"></script>
+            <script>window.PlaybackRatePlugin = window['clappr-playback-rate-plugin'].default</script>
+
     </head>
 
     <body>
         <div id="player"></div>
         <script>
-             var player = new Clappr.Player({{source: "{m3u8_url}", parentId: "#player"}});
+                 var player = new Clappr.Player({{source: "{m3u8_url}", parentId: "#player", plugins: {{'core': [PlaybackRatePlugin]}}}});
         </script>
     </body>
     '''
@@ -102,12 +109,15 @@ class VideoSlinceView(View):
 
         html = '''<head>
             <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clappr@latest/dist/clappr.min.js"></script>
+            <script>window.clappr = Clappr;</script>
+            <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clappr-playback-rate-plugin@0.4.0/lib/clappr-playback-rate-plugin.min.js"></script>
+            <script>window.PlaybackRatePlugin = window['clappr-playback-rate-plugin'].default</script>
         </head>'''
         html += '''
         <body>
             <div id="player"></div>
             <script>
-    var player = new Clappr.Player({{source: "{m3u8_url}", parentId: "#player"}});
+                 var player = new Clappr.Player({{source: "{m3u8_url}", parentId: "#player", plugins: {{'core': [PlaybackRatePlugin]}}}});
                  var base = {base};
                  function set_start(){{
                    elem = document.getElementById('start');
@@ -156,12 +166,15 @@ class SceneEditorView(View):
 
         html = '''<head>
             <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clappr@latest/dist/clappr.min.js"></script>
+            <script>window.clappr = Clappr;</script>
+            <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clappr-playback-rate-plugin@0.4.0/lib/clappr-playback-rate-plugin.min.js"></script>
+            <script>window.PlaybackRatePlugin = window['clappr-playback-rate-plugin'].default</script>
         </head>'''
         html += '''
         <body>
             <div id="player"></div>
             <script>
-    var player = new Clappr.Player({{source: "{m3u8_url}", parentId: "#player"}});
+                 var player = new Clappr.Player({{source: "{m3u8_url}", parentId: "#player", plugins: {{'core': [PlaybackRatePlugin]}}}});
                  var base = {base};
                  function set_start(){{
                    elem = document.getElementById('start');
