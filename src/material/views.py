@@ -106,7 +106,6 @@ class VideoSlinceView(View):
 
         obj = Video.objects.get(pk=vid)
         m3u8_url = reverse('video_m3u8', kwargs={'vid': vid})
-
         html = '''<head>
             <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clappr@latest/dist/clappr.min.js"></script>
             <script>window.clappr = Clappr;</script>
@@ -140,6 +139,13 @@ class VideoSlinceView(View):
             </form>
         </body>
         '''.format(m3u8_url=m3u8_url, base=v.m3u8.scenes[0]['start'], csrf=csrf.get_token(request))
+
+        template = '<a href="#" onclick="player.seek({});"><img src="{}" width="200px">'
+        start = 0
+        for scene in obj.m3u8.scenes[::5]:
+            img = "{}.jpg".format(scene['file_path'])
+            start = scene['start']
+            html += template.format(start, img)
 
         return HttpResponse(html)
 

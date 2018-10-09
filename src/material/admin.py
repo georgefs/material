@@ -14,10 +14,11 @@ class VideoAdmin(admin.ModelAdmin):
         js = ('js/admin/mymodel.js',)
 
     list_display = ('video_name', 'slice', 'links', 'scenes')
+    list_filter = ('id', )
 
     def scenes(self, obj):
         url = reverse('admin:material_videoscene_changelist')
-        url += "?video__name={}".format(obj.name)
+        url += "?q={}".format(obj.name)
         return format_html("<a Target='_self' href='{}'>{}</a>".format(url, 'scenes'))
 
     def video_name(self, obj):
@@ -50,9 +51,10 @@ class VideoSceneAdmin(admin.ModelAdmin):
     class Media:
         js = ('https://cdn.jsdelivr.net/npm/clappr@latest/dist/clappr.min.js',)
 
-    list_display = ('id', 'tag_names', 'text', 'video__name', 'links', 'edit', 'mp4')
+    list_display = ('id', 'tag_names', 'text', 'video__name', 'links', 'edit', 'mp4', 'start')
 
-    list_filter = ('tags', 'video__name')
+    list_filter = ('tags', )
+    search_fields = ('text', 'video__name' )
 
 
     def edit(self, obj):
@@ -62,12 +64,24 @@ class VideoSceneAdmin(admin.ModelAdmin):
     def video__name(self, obj):
         try:
             meta = json.loads(obj.video.meta)
-            return "{left} {left_score}:{right_score} {right}".format(**meta)
+            text = "{left} {left_score}:{right_score} {right}".format(**meta)
         except:
-            return obj.text
+            text = obj.video.name
+
+        url = reverse('admin:material_video_changelist')
+        url += "?id={}".format(obj.video.id)
+        return format_html("<a href='{}'>{}</a>".format(url, text))
 
     def mp4(self, obj):
-        url = "http://35.229.199.4/{}.mp4".format(obj.id)
+        url = "http://104.199.250.233/{}.mp4".format(obj.id)
+        try:
+            base = obj.m3u8.scenes[0]['start']
+            st = round(obj.start - base, 2)
+            ed = round(obj.end - base, 2)
+            url = "http://104.199.250.233:8081/hls_to_mp4?m3u8_url=http%3A%2F%2F104.199.250.233%3A8000%2Fmaterial%2Fscene%2F{}.m3u8&duration={}~{}".format(obj.id, st, ed)
+        except:
+            pass
+
         return format_html("<a Target='_new' href='{}'>{}</a>".format(url, 'mp4'))
 
     def duration(self, obj):
@@ -88,6 +102,11 @@ class VideoSceneAdmin(admin.ModelAdmin):
         url = reverse('scene_preview', kwargs={'vid': obj.id})
         html += "<a Target='_new' href='{}'>{}</a>".format(url, 'preview')
         return format_html(html)
+
+    def get_queryset(self, request):
+        return super(VideoSceneAdmin, self).get_queryset(request).select_related(
+)
+
 
 
 admin.site.register(Video, VideoAdmin)

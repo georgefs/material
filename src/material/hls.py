@@ -152,8 +152,12 @@ def download_from_mp4(source_url, output_path):
     return output_path
 
 
-def to_hls(source, dist):
-    cmd = "ffmpeg -i {source}  -profile:v baseline -level 3.0 -s 640x360 -start_number 0 -hls_list_size 0 -f hls {dist}/video.m3u8".format(source=source, dist=dist)
+def to_hls(source, dist, preview=False):
+    cmd = "ffmpeg -i {source} -vcodec copy -start_number 0 -hls_list_size 0 -f hls {dist}/video.m3u8".format(source=source, dist=dist)
+    cmd = "ffmpeg -loglevel panic -i {source} -start_number 0 -hls_time 2 -hls_list_size 0 -g 1 -f hls {dist}/video.m3u8".format(source=source, dist=dist)
+    if preview:
+        cmd += " -vf fps=1/2 -start_number 0 {dist}/video%d.ts.jpg".format(dist=dist)
+    print(cmd)
     os.system(cmd)
 
 
