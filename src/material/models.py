@@ -80,3 +80,20 @@ class VideoScene(models.Model):
         m3u8 = self.m3u8
         imgs = [v['file_path'] + ".jpg" for v in m3u8.scenes]
         return imgs
+
+
+class Collection(models.Model):
+    name = models.CharField(max_length=2048)
+    text = models.TextField(blank=True)
+    scenes = models.TextField()
+    meta = models.TextField(default='{}')
+
+    @property
+    def m3u8(self):
+        vids = self.scenes.split(',')
+        print(vids)
+        vids = [int(v) for v in vids]
+        info = dict([(v.id, v.m3u8) for v in VideoScene.objects.filter(id__in=vids)])
+        m3u8 = M3U8.concat([info[vid] for vid in vids])
+        print(m3u8)
+        return m3u8

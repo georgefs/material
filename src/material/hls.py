@@ -50,6 +50,7 @@ class M3U8:
             context = re.sub('#EXT-X-MEDIA-SEQUENCE:\d+', '#EXT-X-MEDIA-SEQUENCE:{}'.format(self.scenes[0]['idx']), context)
 
         scene_template = """
+#EXT-X-DISCONTINUITY
 #EXTINF:{duration},{title}
 {file_path}
         """.strip() + "\n"
@@ -120,6 +121,16 @@ class M3U8:
     def from_data(data):
         data = json.loads(data)
         return M3U8(data['headers'], data['scenes'], data['base_url'])
+    
+    @staticmethod
+    def concat(m3u8s):
+        scenes = []
+        headers = m3u8s[0].headers
+        
+        for m3u8 in m3u8s:
+            scenes += m3u8.scenes
+
+        return  M3U8.from_data(json.dumps({'headers': headers, 'scenes': scenes, 'base_url':''}))
 
 
 def create_path(path):

@@ -2,7 +2,7 @@ from django.contrib import admin
 
 # Register your models here.
 from django.contrib import admin
-from .models import Video, VideoScene
+from .models import Video, VideoScene, Collection
 from django.urls import reverse
 from django.utils.html import format_html
 from datetime import timedelta
@@ -76,8 +76,8 @@ class VideoSceneAdmin(admin.ModelAdmin):
         url = "http://104.199.250.233/{}.mp4".format(obj.id)
         try:
             base = obj.m3u8.scenes[0]['start']
-            st = round(obj.start - base, 2)
-            ed = round(obj.end - base, 2)
+            st = round(obj.start, 2)
+            ed = round(obj.end, 2)
             url = "http://104.199.250.233:8081/hls_to_mp4?m3u8_url=http%3A%2F%2F104.199.250.233%3A8000%2Fmaterial%2Fscene%2F{}.m3u8&duration={}~{}".format(obj.id, st, ed)
         except:
             pass
@@ -104,10 +104,33 @@ class VideoSceneAdmin(admin.ModelAdmin):
         return format_html(html)
 
     def get_queryset(self, request):
-        return super(VideoSceneAdmin, self).get_queryset(request).select_related(
-)
+        return super(VideoSceneAdmin, self).get_queryset(request).select_related('video')
 
 
+class CollectionAdmin(admin.ModelAdmin):
+    search_fields = ('name', 'text' )
+    list_display = ('name', 'scenes', 'text', 'links', 'mp4')
+    def links(self, obj):
+        html = ""
+        try:
+            url = reverse('collection_m3u8', kwargs={'cid': obj.id})
+            html += "<a Target='_new' href='{}'>{}</a><br/>".format(url, 'm3u8_url')
+            url = reverse('collection_preview', kwargs={'cid': obj.id})
+            html += "<a Target='_new' href='{}'>{}</a>".format(url, 'preview')
+            return format_html(html)
+        except Exception as e:
+            print(e)
+
+
+    def mp4(self, obj):
+        url = "http://104.199.250.233/{}.mp4".format(obj.id)
+        try:
+            url = "http://104.199.250.233:8081/hls_to_mp4?m3u8_url=http%3A%2F%2F104.199.250.233%3A8000%2Fmaterial%2Fcollection%2F{}.m3u8".format(obj.id)
+        except:
+            pass
+
+        return format_html("<a Target='_new' href='{}'>{}</a>".format(url, 'mp4'))
 
 admin.site.register(Video, VideoAdmin)
 admin.site.register(VideoScene, VideoSceneAdmin)
+admin.site.register(Collection, CollectionAdmin)

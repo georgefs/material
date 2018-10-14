@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from .models import Video, VideoScene
+from .models import Video, VideoScene, Collection
 from django.urls import reverse
 from django.http import HttpResponse
 from datetime import datetime
@@ -8,6 +8,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.middleware import csrf
 from django.shortcuts import redirect
 from django.contrib.auth.decorators import login_required
+from material.hls import M3U8
 
 
 # Create your views here.
@@ -57,6 +58,10 @@ def scene_m3u8(request, vid):
     obj = VideoScene.objects.get(pk=vid).m3u8
     return HttpResponse(obj.render())
 
+def collection_m3u8(request, cid):
+    obj = Collection.objects.get(pk=cid).m3u8
+    return HttpResponse(obj.render())
+
 
 def video_preview(request, vid):
     m3u8_url = reverse('video_m3u8', kwargs={'vid': vid})
@@ -81,6 +86,28 @@ def video_preview(request, vid):
 
 def scene_preview(request, vid):
     m3u8_url = reverse('scene_m3u8', kwargs={'vid': vid})
+
+    template = '''
+    <head>
+            <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clappr@latest/dist/clappr.min.js"></script>
+            <script>window.clappr = Clappr;</script>
+            <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clappr-playback-rate-plugin@0.4.0/lib/clappr-playback-rate-plugin.min.js"></script>
+            <script>window.PlaybackRatePlugin = window['clappr-playback-rate-plugin'].default</script>
+
+    </head>
+
+    <body>
+        <div id="player"></div>
+        <script>
+                 var player = new Clappr.Player({{source: "{m3u8_url}", parentId: "#player", plugins: {{'core': [PlaybackRatePlugin]}}}});
+        </script>
+    </body>
+    '''
+    return HttpResponse(template.format(m3u8_url=m3u8_url))
+
+
+def collection_preview(request, cid):
+    m3u8_url = reverse('collection_m3u8', kwargs={'cid': cid})
 
     template = '''
     <head>
