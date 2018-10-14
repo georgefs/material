@@ -109,7 +109,7 @@ class VideoSceneAdmin(admin.ModelAdmin):
 
 class CollectionAdmin(admin.ModelAdmin):
     search_fields = ('name', 'text' )
-    list_display = ('name', 'scenes', 'text', 'links', 'mp4')
+    list_display = ('name', 'scenes', 'text', 'links')
     def links(self, obj):
         html = ""
         try:
