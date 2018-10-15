@@ -21,6 +21,11 @@ class Video(models.Model):
     meta = models.TextField()
     preview_url = models.URLField(null=True)
 
+    class Meta:
+        verbose_name = '影片'
+        verbose_name_plural = '影片'
+
+
     def __unicode__(self):
         return self.name
 
@@ -81,6 +86,11 @@ class VideoScene(models.Model):
         imgs = [v['file_path'] + ".jpg" for v in m3u8.scenes]
         return imgs
 
+    class Meta:
+        verbose_name = '影片片段'
+        verbose_name_plural = '影片片段'
+
+
 
 class Collection(models.Model):
     name = models.CharField(max_length=2048)
@@ -97,3 +107,9 @@ class Collection(models.Model):
         m3u8 = M3U8.concat([info[vid] for vid in vids])
         print(m3u8)
         return m3u8
+
+    class Meta:
+        verbose_name = '精彩錦集'
+        verbose_name_plural = '精彩錦集'
+
+
