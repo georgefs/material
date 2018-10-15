@@ -7,6 +7,14 @@ from django.urls import reverse
 from django.utils.html import format_html
 from datetime import timedelta
 import json
+import hashlib
+
+def create_key(infos):
+    m = hashlib.md5()
+    for i in infos:
+        m.update(str(i).encode('utf-8'))
+    key = m.hexdigest()
+    return key
 
 
 class VideoAdmin(admin.ModelAdmin):
@@ -75,10 +83,10 @@ class VideoSceneAdmin(admin.ModelAdmin):
     def mp4(self, obj):
         url = "http://104.199.250.233/{}.mp4".format(obj.id)
         try:
-            base = obj.m3u8.scenes[0]['start']
             st = round(obj.start, 2)
             ed = round(obj.end, 2)
-            url = "http://104.199.250.233:8081/hls_to_mp4?m3u8_url=http%3A%2F%2F104.199.250.233%3A8000%2Fmaterial%2Fscene%2F{}.m3u8&duration={}~{}".format(obj.id, st, ed)
+            key = create_key([st, ed])
+            url = "http://104.199.250.233:8081/hls_to_mp4?m3u8_url=http%3A%2F%2F104.199.250.233%3A8000%2Fmaterial%2Fscene%2F{}.m3u8&cache_key={}".format(obj.id, key)
         except:
             pass
 
@@ -109,7 +117,7 @@ class VideoSceneAdmin(admin.ModelAdmin):
 
 class CollectionAdmin(admin.ModelAdmin):
     search_fields = ('name', 'text' )
-    list_display = ('name', 'scenes', 'text', 'links')
+    list_display = ('name', 'scenes', 'text', 'links', 'mp4')
     def links(self, obj):
         html = ""
         try:
@@ -125,7 +133,8 @@ class CollectionAdmin(admin.ModelAdmin):
     def mp4(self, obj):
         url = "http://104.199.250.233/{}.mp4".format(obj.id)
         try:
-            url = "http://104.199.250.233:8081/hls_to_mp4?m3u8_url=http%3A%2F%2F104.199.250.233%3A8000%2Fmaterial%2Fcollection%2F{}.m3u8".format(obj.id)
+            key = create_key(obj.scenes)
+            url = "http://104.199.250.233:8081/hls_to_mp4?m3u8_url=http%3A%2F%2F104.199.250.233%3A8000%2Fmaterial%2Fcollection%2F{}.m3u8&cache_key={}".format(obj.id, key)
         except:
             pass
 
