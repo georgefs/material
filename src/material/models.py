@@ -87,8 +87,8 @@ class VideoScene(models.Model):
         return imgs
 
     class Meta:
-        verbose_name = '影片片段'
-        verbose_name_plural = '影片片段'
+        verbose_name = '精彩片段'
+        verbose_name_plural = '精彩片段'
 
 
 
