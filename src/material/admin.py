@@ -8,6 +8,7 @@ from django.utils.html import format_html
 from datetime import timedelta
 import json
 import hashlib
+from django.shortcuts import redirect
 
 def create_key(infos):
     m = hashlib.md5()
@@ -23,6 +24,7 @@ class VideoAdmin(admin.ModelAdmin):
 
     list_display = ('video_name', 'slice', 'links', 'scenes')
     list_filter = ('id', )
+    readonly_fields = ('slice', 'links', 'scenes')
 
     def scenes(self, obj):
         url = reverse('admin:material_videoscene_changelist')
@@ -63,6 +65,8 @@ class VideoSceneAdmin(admin.ModelAdmin):
 
     list_filter = ('tags', )
     search_fields = ('text', 'video__name' )
+    actions = ('create_collection', )
+    readonly_fields = ('links', 'edit', 'mp4')
 
 
     def edit(self, obj):
@@ -114,10 +118,16 @@ class VideoSceneAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         return super(VideoSceneAdmin, self).get_queryset(request).select_related('video')
 
+    def create_collection(self, request, queryset):
+        scenes = ",".join([str(q.id) for q in queryset])
+        collection = Collection.objects.create(name="{{輸入名稱}}", text="{{輸入敘述}}", scenes=scenes)
+        return redirect('admin:material_collection_change', object_id=collection.id)
+    create_collection.short_description = "合成錦集"
 
 class CollectionAdmin(admin.ModelAdmin):
     search_fields = ('name', 'text' )
     list_display = ('name', 'scenes', 'text', 'links', 'mp4')
+    readonly_fields = ('links', 'mp4')
     def links(self, obj):
         html = ""
         try:
