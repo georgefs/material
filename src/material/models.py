@@ -1,6 +1,9 @@
 from django.db import models
 from .hls import M3U8
+from . import hls
+#from django.conf.settings import MATERIAL_URL, MATERIAL_VIDEO_PATH
 from django.conf import settings
+import os
 
 # Create your models here.
 
@@ -16,6 +19,8 @@ class Tag(models.Model):
 
 
 class Video(models.Model):
+    live = models.BooleanField(default=False)
+
     name = models.CharField(max_length=1024)
     info = models.TextField()
     meta = models.TextField()
@@ -39,11 +44,23 @@ class Video(models.Model):
 
     @property
     def m3u8(self):
-        return M3U8.from_data(self.info)
+        if self.live:
+            print(self.direct_url)
+            return M3U8.from_url(self.direct_url)
+        else:
+            return M3U8.from_data(self.info)
 
     @property
     def default_folder(self):
-        return "j1/material/{}__{}".format(self.id, self.name)
+        return "j1/material/{}".format(self.id, self.name)
+    
+    @property
+    def abspath(self):
+        return os.path.join(settings.MATERIAL_VIDEO_PATH, self.default_folder)
+
+    @property
+    def direct_url(self):
+        return settings.MATERIAL_URL + "{}/video.m3u8".format(self.default_folder)
 
     def load_info(self, m3u8_url):
         m3u8 = M3U8.from_url(m3u8_url)
@@ -61,6 +78,30 @@ class Video(models.Model):
             scene.tags
             scene.add(tag)
         return scene
+
+class Streaming(models.Model):
+    STATUS_CHOICES = (
+        ('wait', 'wait'),
+        ('live', 'live'),
+        ('done', 'done'),
+    )
+    name = models.CharField(max_length=1024)
+    status = models.CharField(max_length=1024, choices=STATUS_CHOICES, default='wait')
+    start = models.DateTimeField(auto_now_add=True)
+    updated = models.DateTimeField(auto_now=True)
+    duration = models.DurationField(default=0)
+    video = models.ForeignKey(Video, on_delete=models.CASCADE, null=True, blank=True)
+    url = models.URLField()
+
+    def save(self, *args, **kwargs):
+        if not self.pk:
+            self.video = Video.objects.create(name="{}_{}".format(self.pk, self.name), live=True)
+        super(Streaming, self).save(*args, **kwargs)
+
+    def start_live(self):
+        hls.to_hls(self.url, self.video.abspath)
+
+
 
 class VideoScene(models.Model):
     video = models.ForeignKey(Video, on_delete=models.CASCADE)

@@ -2,7 +2,7 @@ from django.contrib import admin
 
 # Register your models here.
 from django.contrib import admin
-from .models import Video, VideoScene, Collection
+from .models import Video, VideoScene, Collection, Streaming
 from django.urls import reverse
 from django.utils.html import format_html
 from datetime import timedelta
@@ -21,7 +21,6 @@ def create_key(infos):
 class VideoAdmin(admin.ModelAdmin):
     class Media:
         js = ('js/admin/mymodel.js',)
-
     list_display = ('video_name', 'slice', 'links', 'scenes')
     list_filter = ('id', )
     readonly_fields = ('slice', 'links', 'scenes')
@@ -150,6 +149,17 @@ class CollectionAdmin(admin.ModelAdmin):
 
         return format_html("<a Target='_new' href='{}'>{}</a>".format(url, 'mp4'))
 
+
+class StreamingAdmin(admin.ModelAdmin):
+    list_display_links = []
+    def get_readonly_fields(self, request, obj=None):
+        if obj: # editing an existing object
+            # All model fields as read_only
+            return self.readonly_fields + tuple([item.name for item in obj._meta.fields])
+        return self.readonly_fields
+
+
 admin.site.register(Video, VideoAdmin)
 admin.site.register(VideoScene, VideoSceneAdmin)
 admin.site.register(Collection, CollectionAdmin)
+admin.site.register(Streaming, StreamingAdmin)

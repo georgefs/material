@@ -142,7 +142,8 @@ def create_path(path):
 
 def download(url, output_path):
     create_path(output_path)
-    cmd = "ffmpeg -protocol_whitelist \"file,http,https,tcp,tls\" -i {url} -f hls {output_path}".format(url=url, output_path=output_path)
+    m3u8_path = os.path.join(output_path, 'video.m3u8')
+    cmd = "ffmpeg -protocol_whitelist \"file,http,https,tcp,tls\" -i \"{url}\" -f hls \"{output_path}\"".format(url=url, output_path=m3u8_path)
     os.system(cmd)
     return output_path
 
@@ -158,17 +159,15 @@ def download_to_mp4(m3u8, output_path):
 def download_from_mp4(source_url, output_path):
     create_path(output_path)
     m3u8_path = os.path.join(output_path, 'video.m3u8')
-    cmd = "ffmpeg -protocol_whitelist \"file,http,https,tcp,tls\" -i {} -f hls {}".format(source_url, m3u8_path)
+    cmd = "ffmpeg -protocol_whitelist \"file,http,https,tcp,tls\" -i {}  -f hls {}".format(source_url, m3u8_path)
     os.system(cmd)
     return output_path
 
 
-def to_hls(source, dist, preview=False):
-    cmd = "ffmpeg -i {source} -vcodec copy -start_number 0 -hls_list_size 0 -f hls {dist}/video.m3u8".format(source=source, dist=dist)
-    cmd = "ffmpeg -loglevel panic -i {source} -start_number 0 -hls_time 2 -hls_list_size 0 -g 1 -f hls {dist}/video.m3u8".format(source=source, dist=dist)
+def to_hls(source, dist, preview=False, copycodec=False):
+    cmd = "ffmpeg -loglevel panic -i \"{source}\" -start_number 0 -hls_time 2 -hls_list_size 0 -g 1 -vcodec copy -acodec copy  -f hls \"{dist}/video.m3u8\"".format(source=source, dist=dist)
     if preview:
         cmd += " -vf fps=1/2 -start_number 0 {dist}/video%d.ts.jpg".format(dist=dist)
-    print(cmd)
     os.system(cmd)
 
 
