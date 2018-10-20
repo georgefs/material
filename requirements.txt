@@ -3,3 +3,5 @@ requests
 bs4
 django-extensions
 jupyter
+pillow
+ImageHash

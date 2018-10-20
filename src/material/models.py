@@ -4,6 +4,11 @@ from . import hls
 #from django.conf.settings import MATERIAL_URL, MATERIAL_VIDEO_PATH
 from django.conf import settings
 import os
+import json, requests, re
+from . import highlight
+import tempfile
+import io
+import subprocess
 
 # Create your models here.
 
@@ -24,7 +29,7 @@ class Video(models.Model):
     name = models.CharField(max_length=1024)
     info = models.TextField()
     meta = models.TextField()
-    preview_url = models.URLField(null=True)
+    preview_url = models.URLField(null=True, blank=True)
 
     class Meta:
         verbose_name = '影片'
@@ -81,9 +86,11 @@ class Video(models.Model):
 
 class Streaming(models.Model):
     STATUS_CHOICES = (
+        ('init', 'init'),
         ('wait', 'wait'),
         ('live', 'live'),
         ('done', 'done'),
+        ('fails', 'fails'),
     )
     name = models.CharField(max_length=1024)
     status = models.CharField(max_length=1024, choices=STATUS_CHOICES, default='wait')
@@ -98,8 +105,9 @@ class Streaming(models.Model):
             self.video = Video.objects.create(name="{}_{}".format(self.pk, self.name), live=True)
         super(Streaming, self).save(*args, **kwargs)
 
-    def start_live(self):
-        hls.to_hls(self.url, self.video.abspath)
+    def start_live(self, copycodec=False, delay=False):
+        self.status = 'live'
+        return hls.to_hls(self.url, self.video.abspath, True, copycodec, delay)
 
 
 
@@ -134,6 +142,7 @@ class VideoScene(models.Model):
 
 
 class Collection(models.Model):
+    #synced = models.BooleanField(default=False)
     name = models.CharField(max_length=2048)
     text = models.TextField(blank=True)
     scenes = models.TextField()
@@ -153,4 +162,32 @@ class Collection(models.Model):
         verbose_name = '精彩錦集'
         verbose_name_plural = '精彩錦集'
 
+    def sync(self):
+        scenes = self.m3u8.scenes
+        vs = [v['file_path'] for v in scenes]
+        source = "|".join(vs)
+        tempfolder = tempfile.mkdtemp()
+        output_path = os.path.join(tempfolder, "video.mp4")
 
+        cmd = 'ffmpeg -protocol_whitelist concat,file,http,https,tcp,tls -i concat:{source} -vcodec copy -acodec copy {output_path}'.format(source=source, output_path=output_path).split()
+
+        proc = subprocess.Popen(cmd)
+        proc.wait()
+
+        img = scenes[0]['file_path']+".jpg"
+        img_content = requests.get(img).content
+        img_temp = os.path.join(tempfolder, "video.jpg")
+        with open(img_temp, 'wb+') as f:
+            f.write(img_content)
+        
+        data = {}
+        data['name'] = self.name
+        data['tags'] = " ".join(json.loads(self.meta))
+        data['description'] = self.text
+        data['league'] = 111
+        data['cover_image'] = open(img_temp, 'rb')
+        data['file'] = open(output_path, 'rb')
+
+        highlight.upload(data)
+        self.sync=True
+        self.save()

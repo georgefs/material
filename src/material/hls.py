@@ -5,6 +5,7 @@ import tempfile
 import os
 import copy
 import json
+import subprocess
 
 
 class M3U8:
@@ -24,6 +25,19 @@ class M3U8:
         headers = self.headers
         scenes = scenes
         return M3U8(headers, scenes, self.base_url)
+
+    @property
+    def duration(self):
+        t = 0
+        for s in self.scenes:
+            t += s['duration']
+        return t
+
+    @property
+    def preview_image_template(self):
+        file_path = self.scenes[0]['file_path']
+        base = re.sub('video\d+.ts', '', file_path)
+        return base + "video{}.ts.jpg"
 
     def select(self, idxs):
         idx = 0
@@ -140,41 +154,29 @@ def create_path(path):
         pass
 
 
-def download(url, output_path):
-    create_path(output_path)
-    m3u8_path = os.path.join(output_path, 'video.m3u8')
-    cmd = "ffmpeg -protocol_whitelist \"file,http,https,tcp,tls\" -i \"{url}\" -f hls \"{output_path}\"".format(url=url, output_path=m3u8_path)
-    os.system(cmd)
-    return output_path
-
-
 def download_to_mp4(m3u8, output_path):
     m3u8_path = urllib.parse.urljoin(output_path, "video.m3u8")
     m3u8.create_m3u8_file(m3u8_path)
-    cmd = "ffmpeg -protocol_whitelist \"file,http,https,tcp,tls\" -i \"{m3u8_path}\" -c copy {output_path}".format(m3u8_path=m3u8_path, output_path=output_path)
+    cmd = "ffmpeg -protocol_whitelist file,http,https,tcp,tls -i {m3u8_path} -c copy {output_path}".format(m3u8_path=m3u8_path, output_path=output_path)
+
+    proc = subprocess.Popen(cmd.split())
     os.system(cmd)
-    return output_path
+    if delay:
+        return proc
+    else:
+        proc.wait()
 
 
-def download_from_mp4(source_url, output_path):
-    create_path(output_path)
-    m3u8_path = os.path.join(output_path, 'video.m3u8')
-    cmd = "ffmpeg -protocol_whitelist \"file,http,https,tcp,tls\" -i {}  -f hls {}".format(source_url, m3u8_path)
-    os.system(cmd)
-    return output_path
-
-
-def to_hls(source, dist, preview=False, copycodec=False):
-    cmd = "ffmpeg -loglevel panic -i \"{source}\" -start_number 0 -hls_time 2 -hls_list_size 0 -g 1 -vcodec copy -acodec copy  -f hls \"{dist}/video.m3u8\"".format(source=source, dist=dist)
+def to_hls(source, dist, preview=False, copycodec=False, delay=False):
+    cmd = "ffmpeg -loglevel panic -i {source} -start_number 0 -hls_time 2 -hls_list_size 0 -g 1 -vcodec copy -acodec copy  -f hls {dist}/video.m3u8".format(source=source, dist=dist)
     if preview:
         cmd += " -vf fps=1/2 -start_number 0 {dist}/video%d.ts.jpg".format(dist=dist)
+
+    proc = subprocess.Popen(cmd.split())
     os.system(cmd)
+    if delay:
+        return proc
+    else:
+        proc.wait()
 
 
-def create_previews(hls_path, name_pattern="{}.jpg"):
-    for root, folders, files in os.walk(hls_path):
-        for f in files:
-            filepath = os.path.join(root, f)
-            if filepath.endswith('.ts'):
-                cmd = "ffmpeg -i {} -vframes 1  {}".format(filepath, name_pattern.format(filepath))
-                os.system(cmd)
