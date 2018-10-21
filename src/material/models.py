@@ -93,7 +93,7 @@ class Streaming(models.Model):
         ('fails', 'fails'),
     )
     name = models.CharField(max_length=1024)
-    status = models.CharField(max_length=1024, choices=STATUS_CHOICES, default='wait')
+    status = models.CharField(max_length=1024, choices=STATUS_CHOICES, default='init')
     start = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
     duration = models.DurationField(default=0)
@@ -107,7 +107,6 @@ class Streaming(models.Model):
         super(Streaming, self).save(*args, **kwargs)
 
     def start_live(self, copycodec=False, delay=False):
-        self.status = 'live'
         return hls.to_hls(self.url, self.video.abspath, True, copycodec, delay)
 
 

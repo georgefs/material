@@ -3,6 +3,7 @@ import json
 from . import cba
 from material.models import Video, VideoScene, Collection, Tag, Streaming
 from multiprocessing import Pool
+from django.db import  transaction
 
 from django.db.models import Count
 
@@ -21,7 +22,13 @@ def live(sid):
     logger.info('start video live {}'.format(sid))
 
     from material.models import Video
-    streaming = Streaming.objects.get(pk=sid)
+
+    with transaction.atomic():
+        streaming = Streaming.objects.get(pk=sid)
+        assert streaming.status == 'init'
+        streaming.status = 'live'
+        streaming.save()
+
     video = streaming.video
     proc = streaming.start_live(copycodec=True, delay=True)
 
