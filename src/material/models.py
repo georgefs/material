@@ -101,6 +101,13 @@ class Streaming(models.Model):
     url = models.URLField()
     meta = models.TextField(null=True, blank=True)
 
+
+    def __unicode__(self):
+        return self.name
+
+    def __str__(self):
+        return self.name
+
     def save(self, *args, **kwargs):
         if not self.pk:
             self.video = Video.objects.create(name="{}_{}".format(self.pk, self.name), live=True, meta=self.meta)
