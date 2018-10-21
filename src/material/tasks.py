@@ -1,7 +1,7 @@
 import logging
 import json
 from . import cba
-from material.models import Video, VideoScene, Collection, Tag
+from material.models import Video, VideoScene, Collection, Tag, Streaming
 from multiprocessing import Pool
 
 from django.db.models import Count
@@ -14,40 +14,49 @@ logger = logging.getLogger(__name__)
 from celery_queue import app
 import time
 import traceback
+from datetime import datetime
 
 @app.task
-def live(vid):
-    logger.info('start video live {}'.format(vid))
+def live(sid):
+    logger.info('start video live {}'.format(sid))
 
     from material.models import Video
-    v = Video.objects.get(pk=vid)
-    proc = v.start_live(copycodec=True, delay=True)
-    tagger_job = tagger.delay(vid)
+    streaming = Streaming.objects.get(pk=sid)
+    video = streaming.video
+    proc = streaming.start_live(copycodec=True, delay=True)
+
+    start = datetime.now()
+
+    tagger_job = tagger.delay(sid)
     c = 0
     while True:
         returncode = proc.poll()
         # returncode != 0
         if returncode:
-            v.status = 'fails'
-            logging.info('video live {} fails {}'.format(vid, returncode))
+            streaming.status = 'fails'
+            logging.info('video live {} fails {}'.format(sid, returncode))
             break
         elif returncode == 0:
-            v.status = 'done'
-            logging.info('video live {} end'.format(vid))
+            streaming.status = 'done'
+            logging.info('video live {} end'.format(sid))
             break
-        elif v.duration and c >= v.duration:
+        elif streaming.duration and (datetime.now() - start).total_seconds() >= streaming.duration:
             p.send_signal(9)
-            v.status = 'done'
-            logging.info('video live duration {} end'.format(vid))
+            streaming.status = 'done'
+            logging.info('video live duration {} end'.format(sid))
             break
         else:
             c+=1
-            time.sleep(1)
+            # time.sleep(1)
+            job = tagger.delay(video.id)
+            job.wait()
             continue
+    
+    job = tagger.delay(video.id)
+    job.wait()
 
-
-    v.load_info(v.direct_url)
-    v.save()
+    video.load_info(video.direct_url)
+    video.save()
     
 
 def kv_exchange(d):

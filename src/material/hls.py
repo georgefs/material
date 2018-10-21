@@ -160,7 +160,7 @@ def download_to_mp4(m3u8, output_path):
     cmd = "ffmpeg -protocol_whitelist file,http,https,tcp,tls -i {m3u8_path} -c copy {output_path}".format(m3u8_path=m3u8_path, output_path=output_path)
 
     proc = subprocess.Popen(cmd.split())
-    os.system(cmd)
+
     if delay:
         return proc
     else:
@@ -173,7 +173,7 @@ def to_hls(source, dist, preview=False, copycodec=False, delay=False):
         cmd += " -vf fps=1/2 -start_number 0 {dist}/video%d.ts.jpg".format(dist=dist)
 
     proc = subprocess.Popen(cmd.split())
-    os.system(cmd)
+
     if delay:
         return proc
     else:

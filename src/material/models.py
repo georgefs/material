@@ -99,10 +99,11 @@ class Streaming(models.Model):
     duration = models.DurationField(default=0)
     video = models.ForeignKey(Video, on_delete=models.CASCADE, null=True, blank=True)
     url = models.URLField()
+    meta = models.TextField(null=True, blank=True)
 
     def save(self, *args, **kwargs):
         if not self.pk:
-            self.video = Video.objects.create(name="{}_{}".format(self.pk, self.name), live=True)
+            self.video = Video.objects.create(name="{}_{}".format(self.pk, self.name), live=True, meta=self.meta)
         super(Streaming, self).save(*args, **kwargs)
 
     def start_live(self, copycodec=False, delay=False):
