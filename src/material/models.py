@@ -9,6 +9,7 @@ from . import highlight
 import tempfile
 import io
 import subprocess
+from datetime import timedelta
 
 # Create your models here.
 
@@ -96,7 +97,7 @@ class Streaming(models.Model):
     status = models.CharField(max_length=1024, choices=STATUS_CHOICES, default='init')
     start = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
-    duration = models.DurationField(default=0)
+    duration = models.DurationField(default=timedelta(0))
     video = models.ForeignKey(Video, on_delete=models.CASCADE, null=True, blank=True)
     url = models.URLField()
     meta = models.TextField(null=True, blank=True)
