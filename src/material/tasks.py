@@ -59,9 +59,12 @@ def live(sid, f=False):
             c+=1
             # time.sleep(1)
             try:
+                job = tagger(video.id)
                 pass
-                # job = tagger(video.id)
             except Exception as e:
+                print(e)
+                pass
+            except BaseException as e:
                 print(e)
             # job.wait()
             continue

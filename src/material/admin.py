@@ -160,7 +160,8 @@ class CollectionAdmin(admin.ModelAdmin):
 
 class StreamingAdmin(admin.ModelAdmin):
     list_display_links = []
-    list_display = ['name', 'status', 'url']
+    list_display = ['name', 'status', 'start', 'duration', 'url']
+#    list_editable = ['name', 'status', 'duration', 'url']
 #    def get_readonly_fields(self, request, obj=None):
 #        if obj: # editing an existing object
 #            # All model fields as read_only
