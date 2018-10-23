@@ -168,11 +168,14 @@ def download_to_mp4(m3u8, output_path):
 
 
 def to_hls(source, dist, preview=False, copycodec=False, delay=False):
-    cmd = "ffmpeg -loglevel panic -i {source} -start_number 0 -hls_time 2 -hls_list_size 0 -g 1 -vcodec copy -acodec copy  -f hls {dist}/video.m3u8".format(source=source, dist=dist)
+    create_path(dist)
+    cmd = "ffmpeg -i {source} -start_number 0 -hls_time 2 -hls_list_size 0 -g 1 -f hls {dist}/video.m3u8".format(source=source, dist=dist)
     if preview:
         cmd += " -vf fps=1/2 -start_number 0 {dist}/video%d.ts.jpg".format(dist=dist)
 
-    proc = subprocess.Popen(cmd.split())
+    logfile = open('/tmp/streaming_{}.log'.format(dist.split('/')[-1]), 'wb+')
+
+    proc = subprocess.Popen(cmd.split(), stdout=logfile, stderr=logfile)
 
     if delay:
         return proc

@@ -33,7 +33,6 @@ def upload(data):
     files['cover_image'] = data['cover_image'] # open('cover.jpg', 'rb')
     files['file'] = data['file'] # open('tmp.mp4', 'rb')
     resp = session.post('http://35.229.222.200:8000/studio/videos/', data=info, files=files)
-    assert resp.status_code == 200
     return resp
 
 

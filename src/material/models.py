@@ -99,7 +99,7 @@ class Streaming(models.Model):
     updated = models.DateTimeField(auto_now=True)
     duration = models.DurationField(default=timedelta(0))
     video = models.ForeignKey(Video, on_delete=models.CASCADE, null=True, blank=True)
-    url = models.URLField()
+    url = models.CharField(max_length=4096, null=True, blank=True)
     meta = models.TextField(null=True, blank=True)
 
 
@@ -111,7 +111,7 @@ class Streaming(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.pk:
-            self.video = Video.objects.create(name="{}_{}".format(self.pk, self.name), live=True, meta=self.meta)
+            self.video = Video.objects.create(name="{}_streaming".format(self.name), live=True, meta=self.meta)
         super(Streaming, self).save(*args, **kwargs)
 
     def start_live(self, copycodec=False, delay=False):
@@ -150,7 +150,13 @@ class VideoScene(models.Model):
 
 
 class Collection(models.Model):
-    #synced = models.BooleanField(default=False)
+    status = (
+        ('init', 'init'),
+        ('wait', 'wait'),
+        ('done', 'done'),
+        ('fail', 'fail')
+    )
+    status = models.CharField(max_length=1024, choices=status)
     name = models.CharField(max_length=2048)
     text = models.TextField(blank=True)
     scenes = models.TextField()
@@ -196,6 +202,6 @@ class Collection(models.Model):
         data['cover_image'] = open(img_temp, 'rb')
         data['file'] = open(output_path, 'rb')
 
-        highlight.upload(data)
-        self.sync=True
+        resp = highlight.upload(data)
         self.save()
+        return resp

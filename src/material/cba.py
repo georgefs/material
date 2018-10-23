@@ -15,6 +15,20 @@ import pytesseract
 import re
 import time
 from django.core.cache import cache
+import logging
+logger = logging.getLogger(__name__)
+
+def preprocess(im):
+    print('process')
+    pixdata = im.load()
+    for y in range(im.size[1]):
+        for x in range(im.size[0]):
+            if pixdata[x,y][0]>150 and pixdata[x,y][1]>150 and pixdata[x,y][2]>150:
+                pixdata[x,y]=( 0, 0, 0, 0)
+            else:
+                pixdata[x,y]=(255, 255, 255, 0)
+
+    return im
 
 # 取得圖片 by url
 def get_image(img_url):
@@ -26,26 +40,30 @@ def get_image(img_url):
 # 預測單行
 def detect(img):
     il = img.crop((334, 561, 372, 585))
+    il = img.crop((690, 920, 785, 964))
     ir = img.crop((335, 603, 371, 630))
+    ir = img.crop((1040, 920, 1129, 964))
+
     #il, ir = preprocess(il), preprocess(ir)
     #display(il)
     #display(ir)
     #img_hashs = (imagehash.average_hash(il, hash_size=10), imagehash.average_hash(ir, hash_size=10))
+    il, ir = preprocess(il), preprocess(ir)
     points = pytesseract.image_to_string(il, config='--psm 7'),pytesseract.image_to_string(ir, config='--psm 7')
 
     tmp = []
     for p in points:
-        p = re.sub("[,.;‘)}:]", "", p).replace('A', '4').replace('Z', '2')
+        p = re.sub("[,.;‘)}:]", "", p).replace('A', '4').replace('Z', '2').replace('O', '0').replace('B', '8')
         tmp.append(p)
     print(points)
-    return tuple(points)
+    return tuple(tmp)
 
 # 確認 logo 
 def is_activity(img):
-    t = img.crop((149, 569, 195, 636))
-    ori = imagehash.hex_to_hash('7cfef7586c003c00')
+    t = img.crop((1414, 922, 1455, 964))
+    ori = imagehash.hex_to_hash('3c7af6fa4c3c7c3c')
     new_hash = imagehash.average_hash(t)
-    return ori - new_hash <= 3
+    return ori - new_hash <= 6
 
 
 def predict(img_url):
@@ -56,55 +74,50 @@ def predict(img_url):
     else:
         return None
 
-def get_events(live_id):
-
-    result = []
-    idx = 1
-    while True:
-        events = get_page_events(live_id, idx)
-        if events:
-            result += events
-        else:
-            break
-        idx+=1
-    return result
 
 
-def get_page_events(live_id, idx):
-    key = "{}_{}_{}".format("get_events", live_id, idx)
-    if cache.get(key, None):
-        return cache.get(key)
-
-
+def get_events(live_id, old_events=[]):
     t = datetime.now().strftime('%s000')
-    api = 'http://data.live.126.net/liveAll/{}/{}.json?&_={}'
-    data = []
-    for i in range(3):
+    api = 'http://api.sports.sina.com.cn/?p=live&s=livecast&a=livecastlogv3&format=json&key=l_{}&id={}&order=-1&num=10000&year=2014-03-05&callback=&dpc=1'
+    # api = 'http://data.live.126.net/live/{}.json?_={}'
+    if not old_events:
+        # query for none id 
+        oldest_event = {"id": ""}
+    else:
+        oldest_event = old_events[-1]
+
+    old_events = list(reversed(old_events))
+
+    new_events = []
+    while True:
         try:
-            resp = requests.get(api.format(live_id, idx, t))
-            if resp.status_code == 200:
-                data = []
-                if len(resp.content) > 0:
-                    data = resp.json()['messages']
-
-                if len(data) >= 20:
-                    cache.set(key, data, 10800)
+            url = api.format(live_id, oldest_event['id'])
+            data = requests.get(url).json()['result']['data']
+            if len(data) == 0:
+                logger.info('cba api:{} success fetch {} message'.format(url, len(old_events)))
                 break
-        except Exception as e:
-            print(e)
 
-    return data
+            oldest_event = data[-1]
+            new_events = new_events + data
+        except Exception as e:
+            logger.warning('cba api {} error {}'.format(url, e))
+    logger.info('cba api fetch {}'.format(new_events))
+    return list(reversed(old_events + new_events))
+            
+        
+
+
 
 def get_players_tag(message):
     result = []
     for player, names in players.players.items():
         for name in names:
             if name in message:
-                result.append((message.index(name), player))
+                result.append((message.rfind(name), player))
                 break
     if result:
         result = sorted(result, key=lambda x:x[0])
-        result = [v[1] for v in result]
+        print(result)
     return result
 
 
@@ -117,18 +130,22 @@ def get_action_tags(message):
             "中距离":["中距离","中投","踩线"],
             "篮下":["篮下强攻","篮下","放进","强打"],
             "射篮":["跳投","抛投","投了","投一发","后仰","抛射","骑射","骑马射箭","强投","射一发"],
-            "其他事件":["拉杆","擦板","罚","补篮","挑篮","打板","勾手","反篮","干拔","反击","空切","跑投","强起","放篮","半截篮","放球","舔篮","放筐","上空篮","补进","打进","补中","两分"],
+            "其他事件":["拉杆","擦板","补篮","挑篮","打板","勾手","反篮","干拔","反击","空切","跑投","强起","放篮","半截篮","放球","舔篮","放筐","上空篮","补进","打进","补中","两分"],
     }
     result = []
     for action, keywords in actions.items():
         for keyword in keywords:
             if keyword in message:
                 result.append(action)
+    if "罚" in message.replace('罚球线', ''):
+        result.append('罚球')
     return result
 
 def is_teams(team, player):
     if player in teams.teams[team]:
         return True
+    else:
+        return False
 
 def is_star(player):
     return player in players.stars

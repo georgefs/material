@@ -9,6 +9,7 @@ from datetime import timedelta
 import json
 import hashlib
 from django.shortcuts import redirect
+from material import tasks
 
 def create_key(infos):
     m = hashlib.md5()
@@ -125,8 +126,10 @@ class VideoSceneAdmin(admin.ModelAdmin):
 
 class CollectionAdmin(admin.ModelAdmin):
     search_fields = ('name', 'text' )
-    list_display = ('name', 'scenes', 'text', 'links', 'mp4')
+    list_display = ('name', 'status', 'scenes', 'text', 'links', 'mp4')
     readonly_fields = ('links', 'mp4')
+    actions = ('publish',)
+
     def links(self, obj):
         html = ""
         try:
@@ -149,15 +152,20 @@ class CollectionAdmin(admin.ModelAdmin):
 
         return format_html("<a Target='_new' href='{}'>{}</a>".format(url, 'mp4'))
 
+    def publish(self, request, queryset):
+        ids = [q.id for q in queryset]
+        tasks.sync_collections.delay(ids)
+
+
 
 class StreamingAdmin(admin.ModelAdmin):
     list_display_links = []
     list_display = ['name', 'status', 'url']
-    def get_readonly_fields(self, request, obj=None):
-        if obj: # editing an existing object
-            # All model fields as read_only
-            return self.readonly_fields + tuple([item.name for item in obj._meta.fields])
-        return self.readonly_fields
+#    def get_readonly_fields(self, request, obj=None):
+#        if obj: # editing an existing object
+#            # All model fields as read_only
+#            return self.readonly_fields + tuple([item.name for item in obj._meta.fields])
+#        return self.readonly_fields
 
 
 admin.site.register(Video, VideoAdmin)

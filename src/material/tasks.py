@@ -16,20 +16,23 @@ from celery_queue import app
 import time
 import traceback
 from datetime import datetime
+import traceback
 
 @app.task
-def live(sid):
+def live(sid, f=False):
     logger.info('start video live {}'.format(sid))
 
     from material.models import Video
 
     with transaction.atomic():
         streaming = Streaming.objects.get(pk=sid)
-        assert streaming.status == 'init'
+        if not f:
+            assert streaming.status == 'init'
         streaming.status = 'live'
         streaming.save()
 
     video = streaming.video
+    print(video)
     proc = streaming.start_live(copycodec=True, delay=True)
 
     start = datetime.now()
@@ -55,8 +58,12 @@ def live(sid):
         else:
             c+=1
             # time.sleep(1)
-            job = tagger.delay(video.id)
-            job.wait()
+            try:
+                pass
+                # job = tagger(video.id)
+            except Exception as e:
+                print(e)
+            # job.wait()
             continue
     
     job = tagger.delay(video.id)
@@ -79,6 +86,7 @@ def point_hash(p):
 
 @app.task
 def tagger(vid, end=False):
+    print("start tagger {}".format(vid))
     try:
         v = Video.objects.get(pk=vid)
         meta = json.loads(v.meta)
@@ -101,35 +109,48 @@ def tagger(vid, end=False):
                 time_mappings[key] = cba.predict(image_template.format(key))
         point_mappings = dict(sorted([(point_hash(v[1]), v[0]) for v in time_mappings.items() if v[1]], key=lambda x:-x[1]))
 
-        events = cba.get_events(live_id)
+        events = cba.get_events(live_id, events)
 
         section_mappings ={
-            "未开始": "section_1",
-            "第一节": "section_1",
-            "第二节": "section_2",
-            "第三节": "section_3",
-            "第四节": "section_4",
+            0: "section_1",
+            1: "section_1",
+            2: "section_2",
+            3: "section_3",
+            4: "section_4",
         }
-        home_team, away_team = events[0]['homeTeam'], events[0]['awayTeam']
-        for idx, event in enumerate(events):
-            if idx > 0:
-                l_event = events[idx-1]
-                last_point = (int(l_event['homeScore']), int(l_event['awayScore']))
-            else:
-                last_point = (0, 0)
+        last_score_event_idx = 0
+        for event_idx, event in enumerate(events):
+            last_point = (0, 0)
+            c = 1
+            while True:
+                l_event = events[event_idx-c]
+                try:
+                    last_point = (int(l_event['s']['s1']), int(l_event['s']['s2']))
+                    break
+                except:
+                    pass
+                if event_idx - c == 0:
+                    break
+                c+=1 
 
-            point = int(event['homeScore']), int(event['awayScore'])
+            if not event.get('s', None):
+                continue
+
+            point = int(event['s']['s1']), int(event['s']['s2'])
             key = point_hash(point)
-            msg = event.get('msg', {}).get('content', event.get('news', {}).get('title', ''))
+            msg = event['m']
 
             if not matcheds_dict.get(key, False) and point_mappings.get(key, False):
                 start = point_mappings[key] * 2
-                matcheds_dict[key] = start
-                players = cba.get_players_tag(msg)
+                print(last_score_event_idx, 'last:')
+                merged_msg = "\n".join([events[i]['m'] for i in range(last_score_event_idx, event_idx+1) if events[i].get('m')])
+                print(len(merged_msg))
                 actions = cba.get_action_tags(msg)
+                msg = merged_msg
 
 
                 score_team = None
+                score_point = 0 
                 if point[0] != (last_point[0]) and point[1] != (last_point[1]):
                     pass
                 else:
@@ -141,15 +162,20 @@ def tagger(vid, end=False):
                         score_point = point[1] - last_point[1]
 
                 tags = []
+                players = cba.get_players_tag(merged_msg)
                 score_player = None
                 # player
-                for p in reversed(players):
+                for idx, p in reversed(players):
                     t, _ = Tag.objects.get_or_create(name='{}_player'.format(p))
                     tags.append(t)
+
+                    #print(cba.is_teams(score_team, p), score_team, p, msg.split('\n')[-1])
                     if score_team and not score_player and cba.is_teams(score_team, p):
                         t, _ = Tag.objects.get_or_create(name='{}_score_player'.format(p))
                         score_player = p
                         tags.append(t)
+                        msg = msg[msg.rfind('\n', 0, idx):]
+                    # print(score_player)
 
                 if len(players) == 1:
                     t, _ = Tag.objects.get_or_create(name='{}_score_player'.format(p))
@@ -165,8 +191,7 @@ def tagger(vid, end=False):
                 tags.append(t)
 
                 # section number
-                print(event['section'])
-                section_tag = section_mappings.get(event['section'], None)
+                section_tag = section_mappings.get(event['q'], None)
                 if section_tag:
                     t, _ = Tag.objects.get_or_create(name=section_tag)
                     tags.append(t)
@@ -184,13 +209,22 @@ def tagger(vid, end=False):
                 scene_meta['score_player'] = score_player
                 scene_meta['event'] = event
 
+
+                VideoScene.objects.filter(video=v, text=key + msg).delete()
                 # scene duration
-                if "罚" in msg:
+                if "罚" in msg.replace("罚球线", ""):
                     scene = v.slice(key + msg, start -30 , start, meta=json.dumps(scene_meta))
                 else:
                     scene = v.slice(key + msg, start -9 , start, meta=json.dumps(scene_meta))
 
                 scene.tags.add(*tags)
+
+                # tag mache successed
+                matcheds_dict[key] = start
+                if point != last_point:
+                    print('point change', last_score_event_idx, point, last_point, event_idx)
+                    last_score_event_idx = event_idx
+                    last_point = point
                 
     except Exception as e:
         traceback.print_exc()
@@ -207,22 +241,23 @@ def tagger(vid, end=False):
         v.save()
 
         sections = [
-           "第二节",
-           "第三节",
-           "第四节"
+           2,
+           3,
+           4
         ]
         c = 0
         for event in events:
-            if sections and event['section'] == sections[0]:
-                print(event['section'] , sections[0])
+            
+            if sections and event.get('q', None) == sections[0]:
+                # print(event['q'] , sections[0])
                 c+= 1
-                point = event['homeScore'], event['awayScore']
+                point = event['s']['s1'], event['s']['s2']
                 create_collections(v.id, c, point)
                 sections = sections[1:]
                 
         if end:
             c+=1
-            point = event['homeScore'], event['awayScore']
+            point = event['s']['s1'], event['s']['s2']
             create_collections(v.id, c, point)
 
 def process_queryset(qs):
@@ -289,8 +324,10 @@ def create_collections(vid, section, point=None):
 
     def score_king_collection(queryset, section_name):
         player_scores = order_player(queryset)
+        if not player_scores:
+            return
         player, score = player_scores[0]
-        queryset = queryset.exclude(text__contains='罚')
+        queryset = queryset.exclude(tags__name='罚球_event')
         score_scenes = query_tag(queryset, "{}_score_player".format(player))
         ids = to_ids(score_scenes)
         name = "【{}】{}分 {}得分王 {}".format(player, score, section_name, suffix)
@@ -328,7 +365,7 @@ def create_collections(vid, section, point=None):
                     break
 
 
-                team_queryset = team_queryset.exclude(text__contains='罚')
+                team_queryset = team_queryset.exclude(tags__name='罚球_event')
                 if not team_queryset:
                     continue
                 score_scenes = query_tag(team_queryset, "{}_score_player".format(player))
@@ -350,9 +387,6 @@ def create_collections(vid, section, point=None):
 
         return cs
 
-        player_scores = order_player(queryset)[0]
-        name = "【{}】全场集锦{}"
-        player_scores = player_scores[1:]
 
     section_mapping = {
         "1": "首节",
@@ -386,6 +420,8 @@ def create_collections(vid, section, point=None):
     meta['processed_sections'] = processed_sections
     v.meta = json.dumps(meta)
     v.save()
+    cs = Collection.objects.filter(status='init')
+    #sync_collections.delay([c.id for c in cs])
     
 
 def extract_events(queryset):
@@ -404,7 +440,7 @@ def query_highlight(queryset):
     queryset = process_queryset(queryset)
     highlight = []
     result = []
-    queryset = queryset.exclude(text__contains='罚')
+    queryset = queryset.exclude(tags__name='罚球_event')
     # ordered
     highlight = list(queryset.filter(tags__name='灌篮_event'))
     highlight += list(queryset.filter(tags__name='三分_event'))
@@ -428,6 +464,9 @@ def order_player(queryset):
         meta = json.loads(q.meta)
         player = meta['score_player']
         score = meta['score']
+        if not player:
+            continue
+
         score += result.get(player, 0)
         result[player] = score
     result = sorted(result.items(), key=lambda x:-x[1])
@@ -476,11 +515,26 @@ def rm(vid):
     VideoScene.objects.filter(video=v).delete()
     meta = json.loads(v.meta)
     del meta['matcheds']
+    del meta['processed_sections']
     v.meta = json.dumps(meta)
     v.save()
 
 @app.task
-def sync(collection_ids):
-    cs = Collection.objects.filter(id__in=collection_ids)
-    for c in cs:
-        c.sync()
+def sync_collections(ids):
+    with transaction.atomic():
+        inits = Collection.objects.filter(id__in =ids)
+        inits.update(status='wait')
+
+    for c in inits:
+        print(c)
+        try:
+            resp = c.sync()
+            c.status = 'done'
+            if resp.status_code not in [200, 201]:
+                print(resp.content)
+                raise Exception('error resp ')
+        except Exception as e:
+            traceback.print_exc()
+            c.status = 'fail'
+        finally:
+            c.save()
