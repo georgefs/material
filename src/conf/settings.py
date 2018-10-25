@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'material',
     'django_extensions',
+    'cba',
 ]
 
 MIDDLEWARE = [
