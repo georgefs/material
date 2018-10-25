@@ -158,5 +158,8 @@ MATERIAL_STORAGE = 'gcs'
 MATERIAL_BUCKET = 'livingbio-library'
 
 MATERIAL_URL = 'https://storage.googleapis.com/livingbio-library/'
+MATERIAL_URL = 'http://104.199.250.233:8000/static/streaming/'
+MATERIAL_URL = 'http://104.199.250.233/'
 
-MATERIAL_VIDEO_PATH = os.path.join(BASE_DIR, "videos")
+
+MATERIAL_VIDEO_PATH = os.path.join(STATIC_ROOT, "streaming")
