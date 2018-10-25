@@ -5,3 +5,5 @@ django-extensions
 jupyter
 pillow
 ImageHash
+celery
+uwsgi
