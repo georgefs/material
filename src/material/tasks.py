@@ -17,6 +17,8 @@ import time
 import traceback
 from datetime import datetime
 import traceback
+from datetime import datetime
+import time
 
 @app.task
 def live(sid, f=False):
@@ -36,10 +38,10 @@ def live(sid, f=False):
     proc = streaming.start_live(copycodec=True, delay=True)
 
     start = datetime.now()
-
     tagger_job = tagger.delay(sid)
     c = 0
     while True:
+        loop_start =  datetime.now()
         returncode = proc.poll()
         # returncode != 0
         if returncode:
@@ -67,6 +69,10 @@ def live(sid, f=False):
             except BaseException as e:
                 print(e)
             # job.wait()
+            finally:
+                ds = (datetime.now() - loop_start).total_seconds()
+                if ds < 10:
+                    time.sleep(10 - ds)
             continue
     
     job = tagger.delay(video.id)
