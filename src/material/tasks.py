@@ -144,7 +144,16 @@ def tagger(vid, end=False):
             msg = event['m']
 
             if not matcheds_dict.get(key, False) and point_mappings.get(key, False):
-                start = point_mappings[key] * 2
+                start_idx = point_mappings[key]
+                start = start_idx * 2
+
+                for i in range(min(30, start_idx)):
+                    if time_mappings[start_idx - 1 -i]:
+                        break
+                not_point_frames = i
+
+
+
                 print(last_score_event_idx, 'last:')
                 merged_msg = "\n".join([events[i]['m'] for i in range(last_score_event_idx, event_idx+1) if events[i].get('m')])
                 print(len(merged_msg))
@@ -204,6 +213,11 @@ def tagger(vid, end=False):
                     t, _ = Tag.objects.get_or_create(name="{}_score".format(score_team))
                     tags.append(t)
 
+                if not_point_frames > 4:
+                    t, _ = Tag.objects.get_or_create(name="unsafe")
+                    tags.append(t)
+
+
                 scene_meta = {}
                 scene_meta['score'] = score_point
                 scene_meta['teams'] = [home_team, away_team]
@@ -216,9 +230,9 @@ def tagger(vid, end=False):
                 VideoScene.objects.filter(video=v, text=key + msg).delete()
                 # scene duration
                 if "罚" in msg.replace("罚球线", ""):
-                    scene = v.slice(key + msg, start -30 , start, meta=json.dumps(scene_meta))
+                    scene = v.slice(key + msg, start - 30 , start, meta=json.dumps(scene_meta))
                 else:
-                    scene = v.slice(key + msg, start -9 , start, meta=json.dumps(scene_meta))
+                    scene = v.slice(key + msg, start -5 , start, meta=json.dumps(scene_meta))
 
                 scene.tags.add(*tags)
 
@@ -330,7 +344,7 @@ def create_collections(vid, section, point=None):
         if not player_scores:
             return
         player, score = player_scores[0]
-        queryset = queryset.exclude(tags__name='罚球_event')
+        queryset = queryset.exclude(tags__name='罚球_event').exclude(tags__name='unsafe')
         score_scenes = query_tag(queryset, "{}_score_player".format(player))
         ids = to_ids(score_scenes)
         name = "【{}】{}分 {}得分王 {}".format(player, score, section_name, suffix)
@@ -368,7 +382,7 @@ def create_collections(vid, section, point=None):
                     break
 
 
-                team_queryset = team_queryset.exclude(tags__name='罚球_event')
+                team_queryset = team_queryset.exclude(tags__name='罚球_event').exclude(tags__name='unsafe')
                 if not team_queryset:
                     continue
                 score_scenes = query_tag(team_queryset, "{}_score_player".format(player))
@@ -443,15 +457,17 @@ def query_highlight(queryset):
     queryset = process_queryset(queryset)
     highlight = []
     result = []
-    queryset = queryset.exclude(tags__name='罚球_event')
+    tmp = []
+    queryset = queryset.exclude(tags__name='罚球_event').exclude(tags__name='unsafe')
     # ordered
     highlight = list(queryset.filter(tags__name='灌篮_event'))
     highlight += list(queryset.filter(tags__name='三分_event'))
     highlight += list(queryset.filter(tags__name='快攻_event'))
     highlight += list(queryset.filter(tags__name='上篮_event'))
     for h in highlight:
-        if h.id not in result:
+        if h.id not in tmp:
             result.append(h)
+            tmp.append(h.id)
     return result
 
 def query_three_point(queryset):

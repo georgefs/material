@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 def preprocess(im):
     print('process')
+
     pixdata = im.load()
     for y in range(im.size[1]):
         for x in range(im.size[0]):
@@ -37,19 +38,28 @@ def get_image(img_url):
     img = Image.open(BytesIO(response.content))
     return img
 
+
+def resize(origin_size, target_size, bound):
+    pw = target_size[0] / origin_size[0]
+    ph = target_size[1] / origin_size[1]
+    return (round(bound[0]*pw), round(bound[1]*ph), round(bound[2]*pw), round(bound[3]*ph))
+
 # 預測單行
 def detect(img):
+    os = (1920, 1080)
+    cs = img.size
+    
     il = img.crop((334, 561, 372, 585))
-    il = img.crop((690, 920, 785, 964))
+    il = img.crop(resize(os, cs, (690, 920, 785, 964)))
     ir = img.crop((335, 603, 371, 630))
-    ir = img.crop((1040, 920, 1129, 964))
+    ir = img.crop(resize(os, cs, (1040, 920, 1129, 964)))
 
     #il, ir = preprocess(il), preprocess(ir)
     #display(il)
     #display(ir)
     #img_hashs = (imagehash.average_hash(il, hash_size=10), imagehash.average_hash(ir, hash_size=10))
     il, ir = preprocess(il), preprocess(ir)
-    points = pytesseract.image_to_string(il, config='--psm 7'),pytesseract.image_to_string(ir, config='--psm 7')
+    points = pytesseract.image_to_string(il, config='--psm 7 -l number'),pytesseract.image_to_string(ir, config='--psm 7 -l number')
 
     tmp = []
     for p in points:
@@ -60,10 +70,14 @@ def detect(img):
 
 # 確認 logo 
 def is_activity(img):
+    os = (1920, 1080)
+    cs = img.size
+
     t = img.crop((1414, 922, 1455, 964))
-    ori = imagehash.hex_to_hash('3c7af6fa4c3c7c3c')
+    t = img.crop(resize(os, cs, (1404, 922, 1465, 964)))
+    ori = imagehash.hex_to_hash('183c3c7c3c2c383c')
     new_hash = imagehash.average_hash(t)
-    return ori - new_hash <= 6
+    return ori - new_hash <= 9
 
 
 def predict(img_url):
