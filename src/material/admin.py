@@ -18,6 +18,18 @@ def create_key(infos):
     key = m.hexdigest()
     return key
 
+class IdsFilter(admin.SimpleListFilter):
+    title = 'Ids'
+    parameter_name = 'ids'
+
+    def lookups(self, request, model_admin):
+        return ()
+
+    def queryset(self, request, queryset):
+        ids = request.GET.get(ids).split(',')
+        return queryset.filter(id__in=ids)
+
+
 
 class VideoAdmin(admin.ModelAdmin):
     class Media:
@@ -63,7 +75,7 @@ class VideoSceneAdmin(admin.ModelAdmin):
 
     list_display = ('id', 'tag_names', 'text', 'video__name', 'links', 'edit', 'mp4', 'start')
 
-    list_filter = ('tags', )
+    list_filter = ('tags', IdsFilter,)
     search_fields = ('text', 'video__name' )
     actions = ('create_collection', )
     readonly_fields = ('links', 'edit', 'mp4')
@@ -116,7 +128,12 @@ class VideoSceneAdmin(admin.ModelAdmin):
         return format_html(html)
 
     def get_queryset(self, request):
-        return super(VideoSceneAdmin, self).get_queryset(request).select_related('video')
+        queryset = super(VideoSceneAdmin, self).get_queryset(request).select_related('video')
+        ids = request.GET.get('ids', "").strip()
+        ids = ids and ids.split(',')
+        if ids:
+            queryset = queryset.filter(id__in=ids)
+        return queryset
 
     def create_collection(self, request, queryset):
         scenes = ",".join([str(q.id) for q in queryset])
@@ -126,7 +143,7 @@ class VideoSceneAdmin(admin.ModelAdmin):
 
 class CollectionAdmin(admin.ModelAdmin):
     search_fields = ('name', 'text' )
-    list_display = ('name', 'status', 'scenes', 'text', 'links', 'mp4', 'video_names')
+    list_display = ('name', 'status', 'scenes_link', 'text', 'links', 'mp4', 'video_names')
     readonly_fields = ('links', 'mp4')
     actions = ('publish',)
     list_filter = ('videos', )
@@ -158,7 +175,12 @@ class CollectionAdmin(admin.ModelAdmin):
         tasks.sync_collections.delay(ids)
 
     def video_names(self, obj):
-        return ",".join([o.name for o in obj.videos.all()])
+        vs = obj.videos.all()
+        return format_html("<br>".join(["<a href='?videos__id__exact={}'>{}</a>".format(v.id, v.name) for v in vs]))
+
+    def scenes_link(self, obj):
+        scenes = obj.scenes.split(',')
+        return format_html("<a href='/admin/material/videoscene/?ids={}'>{}</a>".format(",".join(scenes), "<br>".join(scenes)))
 
 
 
