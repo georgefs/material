@@ -129,6 +129,7 @@ class CollectionAdmin(admin.ModelAdmin):
     list_display = ('name', 'status', 'scenes', 'text', 'links', 'mp4', 'video_names')
     readonly_fields = ('links', 'mp4')
     actions = ('publish',)
+    list_filter = ('videos', )
 
     def links(self, obj):
         html = ""
@@ -165,6 +166,7 @@ class CollectionAdmin(admin.ModelAdmin):
 class StreamingAdmin(admin.ModelAdmin):
     list_display_links = []
     list_display = ['name', 'status', 'start', 'duration', 'url']
+    
 #    list_editable = ['name', 'status', 'duration', 'url']
 #    def get_readonly_fields(self, request, obj=None):
 #        if obj: # editing an existing object
