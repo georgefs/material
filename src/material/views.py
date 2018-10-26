@@ -194,7 +194,6 @@ class SceneEditorView(View):
 
         template = '<a href="#" onclick="player.seek({});"><img src="{}" width="200px">'
         obj = VideoScene.objects.get(pk=vid)
-        images = obj.preview_images()
         m3u8_url = reverse('scene_m3u8', kwargs={'vid': vid})
 
         html = '''<head>

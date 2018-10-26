@@ -126,7 +126,7 @@ class VideoSceneAdmin(admin.ModelAdmin):
 
 class CollectionAdmin(admin.ModelAdmin):
     search_fields = ('name', 'text' )
-    list_display = ('name', 'status', 'scenes', 'text', 'links', 'mp4')
+    list_display = ('name', 'status', 'scenes', 'text', 'links', 'mp4', 'video_names')
     readonly_fields = ('links', 'mp4')
     actions = ('publish',)
 
@@ -155,6 +155,10 @@ class CollectionAdmin(admin.ModelAdmin):
     def publish(self, request, queryset):
         ids = [q.id for q in queryset]
         tasks.sync_collections.delay(ids)
+
+    def video_names(self, obj):
+        return ",".join([o.name for o in obj.videos.all()])
+
 
 
 

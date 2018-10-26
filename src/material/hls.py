@@ -39,6 +39,11 @@ class M3U8:
         base = re.sub('video\d+.ts', '', file_path)
         return base + "video{}.ts.jpg"
 
+    @property
+    def scene_previews(self):
+        for scene in self.scenes:
+            yield(scene, scene['file_path'] + ".jpg")
+
     def select(self, idxs):
         idx = 0
         tmp = {}
@@ -143,6 +148,14 @@ class M3U8:
         
         for m3u8 in m3u8s:
             scenes += m3u8.scenes
+
+        idx = 0
+        st = 0
+        for scene in scenes:
+            scene['idx'] = idx
+            scene['start'] = st 
+            st = st + scene['duration']
+            scene['start'] = st
 
         return  M3U8.from_data(json.dumps({'headers': headers, 'scenes': scenes, 'base_url':''}))
 

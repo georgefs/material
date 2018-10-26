@@ -84,6 +84,13 @@ class Video(models.Model):
             scene.tags
             scene.add(tag)
         return scene
+    
+    @property
+    def scene_previews(self):
+        m3u8 = self.m3u8
+        for scene, preview in m3u8.scene_previews:
+            yield (scene, preview)
+
 
 class Streaming(models.Model):
     STATUS_CHOICES = (
@@ -147,6 +154,12 @@ class VideoScene(models.Model):
         verbose_name = '精彩片段'
         verbose_name_plural = '精彩片段'
 
+    @property
+    def scene_previews(self):
+        m3u8 = self.m3u8
+        for scene, preview in m3u8.scene_previews:
+            yield (scene, preview)
+
 
 
 class Collection(models.Model):
@@ -161,6 +174,16 @@ class Collection(models.Model):
     text = models.TextField(blank=True)
     scenes = models.TextField()
     meta = models.TextField(default='{}')
+    videos = models.ManyToManyField(Video)
+
+    def save(self, *args, **kwargs):
+        if self.scenes.strip():
+            video__ids = VideoScene.objects.filter(id__in=self.scenes.split(',')).values('video').distinct()
+            video__ids = [v['video'] for v in video__ids]
+            self.videos.add(*list(Video.objects.filter(id__in=video__ids)))
+        if not self.status:
+            self.status = 'init'
+        super(Collection, self).save(*args, **kwargs)
 
     @property
     def m3u8(self):
@@ -169,8 +192,14 @@ class Collection(models.Model):
         vids = [int(v) for v in vids]
         info = dict([(v.id, v.m3u8) for v in VideoScene.objects.filter(id__in=vids)])
         m3u8 = M3U8.concat([info[vid] for vid in vids])
-        print(m3u8)
         return m3u8
+
+    @property
+    def scene_previews(self):
+        m3u8 = self.m3u8
+        for scene, preview in m3u8.scene_previews:
+            yield (scene, preview)
+
 
     class Meta:
         verbose_name = '精彩錦集'
