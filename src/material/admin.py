@@ -187,7 +187,7 @@ class CollectionAdmin(admin.ModelAdmin):
 
 class StreamingAdmin(admin.ModelAdmin):
     list_display_links = []
-    list_display = ['name', 'status', 'start', 'duration', 'url']
+    list_display = ['name', 'status', 'start', 'duration', '_urls']
     
 #    list_editable = ['name', 'status', 'duration', 'url']
 #    def get_readonly_fields(self, request, obj=None):

@@ -10,7 +10,10 @@ import tempfile
 import io
 import subprocess
 from datetime import timedelta
-
+import time
+from django.db import  transaction
+import logging
+logger = logging.getLogger(__name__)
 # Create your models here.
 
 
@@ -106,7 +109,7 @@ class Streaming(models.Model):
     updated = models.DateTimeField(auto_now=True)
     duration = models.DurationField(default=timedelta(0))
     video = models.ForeignKey(Video, on_delete=models.CASCADE, null=True, blank=True)
-    url = models.CharField(max_length=4096, null=True, blank=True)
+    _urls = models.TextField(null=True, blank=True)
     meta = models.TextField(null=True, blank=True)
 
 
@@ -121,8 +124,48 @@ class Streaming(models.Model):
             self.video = Video.objects.create(name="{}_streaming".format(self.name), live=True, meta=self.meta)
         super(Streaming, self).save(*args, **kwargs)
 
-    def start_live(self, copycodec=False, delay=False):
-        return hls.to_hls(self.url, self.video.abspath, True, copycodec, delay)
+    @property
+    def urls(self):
+        return self._urls.strip().split("\n")
+
+    @urls.setter
+    def urls(self, urls):
+        self._urls = "\n".join(urls)
+
+    def start_live(self, copycodec=False, delay=False, retry=-1):
+        with transaction.atomic():
+            if self.status == 'init':
+                self.status = 'live'
+                self.save()
+            else:
+                raise Exception("streaming {} error".format(self.name))
+            
+        logger.warning("streaming {} start".format(self.name))
+        urls = self.urls
+        assert urls, "streaming error live url is not define"
+        
+        size = len(urls)
+        while retry != 0:
+            url = urls[retry % size]
+            proc = hls.to_hls(url, self.video.abspath, True, copycodec, True)
+            time.sleep(60)
+            returncode = proc.poll()
+            
+            if not returncode and self.video.m3u8.scenes:
+                if delay:
+                    return proc
+                else:
+                    proc.wait()
+                    self.status = "done"
+                    self.save()
+            else:
+                proc.send_signal(9)
+                logger.warning("streaming {} error".format(url))
+            retry -= 1
+        logger.error("streaming error retry limit {}".format(retry))
+        raise Exception("streaming error retry limit {}".format(retry))
+
+
 
 
 

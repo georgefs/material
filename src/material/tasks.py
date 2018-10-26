@@ -27,12 +27,7 @@ def live(sid, f=False):
 
     from material.models import Video
 
-    with transaction.atomic():
-        streaming = Streaming.objects.get(pk=sid)
-        if not f:
-            assert streaming.status == 'init'
-        streaming.status = 'live'
-        streaming.save()
+    streaming = Streaming.objects.get(pk=sid)
 
     video = streaming.video
     print(video)
@@ -54,7 +49,7 @@ def live(sid, f=False):
             logging.info('video live {} end'.format(sid))
             break
         elif streaming.duration and (datetime.now() - start).total_seconds() >= streaming.duration:
-            p.send_signal(9)
+            proc.send_signal(9)
             streaming.status = 'done'
             logging.info('video live duration {} end'.format(sid))
             break
