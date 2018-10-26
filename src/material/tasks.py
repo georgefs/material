@@ -65,10 +65,10 @@ def live(sid, f=False):
                 job = tagger(video.id)
                 pass
             except Exception as e:
-                print(e)
+                logger.error(e)
                 pass
             except BaseException as e:
-                print(e)
+                logger.error(e)
             # job.wait()
             finally:
                 ds = (datetime.now() - loop_start).total_seconds()
@@ -96,7 +96,8 @@ def point_hash(p):
 
 @app.task
 def tagger(vid, end=False):
-    print("start tagger {}".format(vid))
+    logger.info("start tagger {}".format(vid))
+
     try:
         v = Video.objects.get(pk=vid)
         meta = json.loads(v.meta)
@@ -118,7 +119,7 @@ def tagger(vid, end=False):
                 time_mappings[key] = cba.predict(image_template.format(key))
         point_mappings = dict(sorted([(point_hash(v[1]), v[0]) for v in time_mappings.items() if v[1]], key=lambda x:-x[1]))
 
-        events = Live.live_events(live_id)
+        events = [e for e in Live.live_events(live_id)]
 
         section_mappings ={
             0: "section_1",
@@ -144,7 +145,6 @@ def tagger(vid, end=False):
 
                 merged_msg = "\n".join(event['messages'])
                 msg = "\n".join(event['messages'][:2])
-                print(len(merged_msg))
                 actions = cba.get_action_tags(msg)
                 msg = merged_msg
 
@@ -159,13 +159,11 @@ def tagger(vid, end=False):
                     t, _ = Tag.objects.get_or_create(name='{}_player'.format(p))
                     tags.append(t)
 
-                    #print(cba.is_teams(score_team, p), score_team, p, msg.split('\n')[-1])
                     if score_team and not score_player and cba.is_teams(score_team, p):
                         t, _ = Tag.objects.get_or_create(name='{}_score_player'.format(p))
                         score_player = p
                         tags.append(t)
                         msg = msg
-                    # print(score_player)
 
                 if len(players) == 1:
                     t, _ = Tag.objects.get_or_create(name='{}_score_player'.format(p))
@@ -373,7 +371,11 @@ def create_collections(vid, section, point=None):
         "3": "第三节",
         "4": "第四节",
     }
-    section_name = section_mapping[section]
+    try:
+        section_name = section_mapping[section]
+    except:
+        logger.error("error: sectio {} out of range".format(section))
+        return
     section_scenes = queryset.filter(tags__name='section_{}'.format(section))
 
     section_highlight = highlight_collection(section_scenes, section_name)
