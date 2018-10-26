@@ -2,6 +2,10 @@ from django.db import models
 from datetime import datetime
 import json
 import logging
+import pytz
+import requests
+from django.db import transaction
+
 logger = logging.getLogger(__name__)
 # Create your models here.
 
@@ -90,12 +94,12 @@ class Action(models.Model):
         self._keywords = ",".join(values)
 
     @classmethod
-    def extract(cls, matchtype, msg):
+    def extract(cls, msg):
         actions = cls.objects.all()
 
         result = []
         for action in actions:
-            for keyword in action.keywords():
+            for keyword in action.keywords:
                 pos = msg.rfind(keyword)
                 if pos != -1:
                     result.append((pos, action))
@@ -116,17 +120,16 @@ class Live(models.Model):
 
     @property
     def messages(self):
-        if (datetime.now() - self.updated).total_seconds() > 10:
-            self.update_messages()
         messages = json.loads(self._messages)
+        if (datetime.utcnow().replace(tzinfo=pytz.utc) - self.updated).total_seconds() > 10:
+            self.update_messages(messages)
         return reversed(messages)
 
     @messages.setter
     def messages(self, values):
         self._messages = json.dumps(values)
 
-    def update_messages(self, safe=True):
-        old_messages = self.messages
+    def update_messages(self, old_messages, save=True):
         t = datetime.now().strftime('%s000')
         api = 'http://api.sports.sina.com.cn/?p=live&s=livecast&a=livecastlogv3&format=json&key=l_{}&id={}&order=-1&num=10000&year=2014-03-05&callback=&dpc=1'
 
@@ -136,29 +139,30 @@ class Live(models.Model):
         end = False
         while True:
             messages = []
-            for i in range(3):
-                try:
-                    resp = requests.get(api.format(self.live_id, fetch_message_id))
-                    messages = resp.json()['result']['data']
-                except:
-                    pass
-            if not messages:
-                logger.warning('update message warning live_id:{} fetch_message_id:{} retry 3 times'.format(self.live_id, fetch_message_id))
+            try:
+                url = api.format(self.live_id, fetch_message_id)
+                logger.warning(url)
+                resp = requests.get(url)
+                messages = resp.json()['result']['data']
+
+                for message in messages:
+                    if message['id'] == original_top_message['id']:
+                        end = True
+                        logger.warning(fetch_message_id)
+                        break
+                    else:
+                        new_messages.append(message)
+                        fetch_message_id = message['id']
+            except Exception as e:
+                logger.warning('request api error {}'.format(url))
                 return
 
-            idx = 0
-            for message in messages:
-                if message['id'] == original_top_message['id']:
-                    end = True
-                    fetch_message_id = message['id']
-                    break
-                else:
-                    messages_tmp.append(message)
             if end or not messages:
                 break
 
         messages = new_messages + old_messages
-        self._message = json.dumps(messages)
+        self._messages = json.dumps(messages)
+        print(len(messages))
         if save:
             self.save()
         
@@ -166,7 +170,9 @@ class Live(models.Model):
     @classmethod
     def live_message(cls, live_id):
         live, _ = cls.objects.get_or_create(live_id=live_id)
-        for message in self.messages:
+        if _:
+            live.update_messages()
+        for message in live.messages:
             yield message
 
     @classmethod
@@ -192,18 +198,22 @@ class Live(models.Model):
 
             ## point event
             tmp.append(message['m'].strip())
+            print(message)
             if point != old_point:
                 info = {}
                 info['type'] = "score"
+                info['messages'] = tmp
 
                 if point[0] != old_point[0]:
                     info['score_team'] = base["team1"]
                     info['score_point'] = point[0] - old_point[0]
                 else:
                     info['score_team'] = base["team2"]
-                    info['score_point'] = point[0] - old_point[0]
+                    info['score_point'] = point[1] - old_point[1]
+
                 tmp = []
                 info.update(base)
+                old_point = point
                 yield info
 
             ## change section
