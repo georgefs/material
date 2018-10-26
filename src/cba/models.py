@@ -195,10 +195,10 @@ class Live(models.Model):
             base['team1'] = message['team1']
             base['team2'] = message['team2']
             base['section'] = message['q']
+            base['point'] = point
 
             ## point event
             tmp.append(message['m'].strip())
-            print(message)
             if point != old_point:
                 info = {}
                 info['type'] = "score"
