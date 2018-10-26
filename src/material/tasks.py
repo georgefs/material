@@ -4,6 +4,7 @@ from . import cba
 from material.models import Video, VideoScene, Collection, Tag, Streaming
 from multiprocessing import Pool
 from django.db import  transaction
+from cba.models import Live
 
 from django.db.models import Count
 
@@ -100,7 +101,6 @@ def tagger(vid, end=False):
         v = Video.objects.get(pk=vid)
         meta = json.loads(v.meta)
         live_id = meta.get('live_id')
-        events = meta.get('events', [])
         logs = meta.get('logs', []) # (time(second * 1/2), points)
         matcheds = meta.get('matcheds', [])
         home_team = meta.get('home_team', "")
@@ -118,7 +118,7 @@ def tagger(vid, end=False):
                 time_mappings[key] = cba.predict(image_template.format(key))
         point_mappings = dict(sorted([(point_hash(v[1]), v[0]) for v in time_mappings.items() if v[1]], key=lambda x:-x[1]))
 
-        events = cba.get_events(live_id, events)
+        events = Live.live_events(live_id)
 
         section_mappings ={
             0: "section_1",
@@ -127,27 +127,11 @@ def tagger(vid, end=False):
             3: "section_3",
             4: "section_4",
         }
-        last_score_event_idx = 0
-        for event_idx, event in enumerate(events):
-            last_point = (0, 0)
-            c = 1
-            while True:
-                l_event = events[event_idx-c]
-                try:
-                    last_point = (int(l_event['s']['s1']), int(l_event['s']['s2']))
-                    break
-                except:
-                    pass
-                if event_idx - c == 0:
-                    break
-                c+=1 
-
-            if not event.get('s', None):
+        for  event in events:
+            if event['type'] != 'score':
                 continue
-
-            point = int(event['s']['s1']), int(event['s']['s2'])
+            point = event['point']
             key = point_hash(point)
-            msg = event['m']
 
             if not matcheds_dict.get(key, False) and point_mappings.get(key, False):
                 start_idx = point_mappings[key]
@@ -158,26 +142,14 @@ def tagger(vid, end=False):
                         break
                 not_point_frames = i
 
-
-
-                print(last_score_event_idx, 'last:')
-                merged_msg = "\n".join([events[i]['m'] for i in range(last_score_event_idx, event_idx+1) if events[i].get('m')])
+                merged_msg = "\n".join(event['messages'])
+                msg = "\n".join(event['messages'][:2])
                 print(len(merged_msg))
                 actions = cba.get_action_tags(msg)
                 msg = merged_msg
 
-
-                score_team = None
-                score_point = 0 
-                if point[0] != (last_point[0]) and point[1] != (last_point[1]):
-                    pass
-                else:
-                    if point[0] != last_point[0]:
-                        score_team = home_team
-                        score_point = point[0] - last_point[0]
-                    else:
-                        score_team = away_team
-                        score_point = point[1] - last_point[1]
+                score_team = event['score_team']
+                score_point = event['score_point']
 
                 tags = []
                 players = cba.get_players_tag(merged_msg)
@@ -192,7 +164,7 @@ def tagger(vid, end=False):
                         t, _ = Tag.objects.get_or_create(name='{}_score_player'.format(p))
                         score_player = p
                         tags.append(t)
-                        msg = msg[msg.rfind('\n', 0, idx):]
+                        msg = msg
                     # print(score_player)
 
                 if len(players) == 1:
@@ -209,7 +181,7 @@ def tagger(vid, end=False):
                 tags.append(t)
 
                 # section number
-                section_tag = section_mappings.get(event['q'], None)
+                section_tag = section_mappings.get(event['section'], None)
                 if section_tag:
                     t, _ = Tag.objects.get_or_create(name=section_tag)
                     tags.append(t)
@@ -230,7 +202,6 @@ def tagger(vid, end=False):
                 scene_meta['point'] = point
                 scene_meta['score_team'] = score_team
                 scene_meta['score_player'] = score_player
-                scene_meta['event'] = event
 
 
                 VideoScene.objects.filter(video=v, text=key + msg).delete()
@@ -244,44 +215,29 @@ def tagger(vid, end=False):
 
                 # tag mache successed
                 matcheds_dict[key] = start
-                if point != last_point:
-                    print('point change', last_score_event_idx, point, last_point, event_idx)
-                    last_score_event_idx = event_idx
-                    last_point = point
                 
     except Exception as e:
         traceback.print_exc()
 
     finally:
-        meta['events'] = events
+        # meta['events'] = events
         meta['logs'] = [v for v in time_mappings.items()]
         meta['matcheds'] = [v for v in matcheds_dict.items()]
         meta['home_team'] = home_team
         meta['away_team'] = away_team
         
-
         v.meta = json.dumps(meta)
         v.save()
 
-        sections = [
-           2,
-           3,
-           4
-        ]
-        c = 0
+
         for event in events:
-            
-            if sections and event.get('q', None) == sections[0]:
-                # print(event['q'] , sections[0])
-                c+= 1
-                point = event['s']['s1'], event['s']['s2']
-                create_collections(v.id, c, point)
-                sections = sections[1:]
+            if event['type'] == 'change_section':           
+                section = event['section']
+                create_collections(v.id, section-1, event['point'])
                 
         if end:
-            c+=1
-            point = event['s']['s1'], event['s']['s2']
-            create_collections(v.id, c, point)
+            point = event['point']
+            create_collections(v.id, 4, point)
 
 def process_queryset(qs):
     scene_ids = set([s.id for s in qs])
