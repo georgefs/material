@@ -171,7 +171,7 @@ class Live(models.Model):
     def live_message(cls, live_id):
         live, _ = cls.objects.get_or_create(live_id=live_id)
         if _:
-            live.update_messages()
+            live.update_messages([])
         for message in live.messages:
             yield message
 
@@ -187,13 +187,15 @@ class Live(models.Model):
             # material message
             try:
                 point = (int(message['s']['s1']), int(message['s']['s2']))
+                team1 = message['team1']
+                team2 = message['team2']
             except:
                 continue
 
             #  live message
             base = {}
-            base['team1'] = message['team1']
-            base['team2'] = message['team2']
+            base['team1'] = team1
+            base['team2'] = team2
             base['section'] = message['q']
             base['point'] = point
 
