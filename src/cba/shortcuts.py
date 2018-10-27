@@ -394,6 +394,15 @@ def create_collections(vid, section, point=None):
     v.save()
     cs = Collection.objects.filter(status='init')
     #sync_collections.delay([c.id for c in cs])
+
+
+    hooks = [
+        "https://hooks.slack.com/services/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",
+        "https://hooks.slack.com/services/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"
+    ]
+    data = {"text": "{} 第{}節 錦集完成 http://104.199.250.233:8000/admin/material/collection/?videos__id__exact={}".format(v.name, section, v.id)}
+    for h in hooks:
+        requests.post(h, data=json.dumps(data))
     
 
 def extract_events(queryset):
