@@ -5,6 +5,7 @@ import logging
 import pytz
 import requests
 from django.db import transaction
+import re
 
 logger = logging.getLogger(__name__)
 # Create your models here.
@@ -87,7 +88,7 @@ class Action(models.Model):
 
     @property
     def keywords(self):
-        return [keyword.strip() for keyword in self._keywords.strip(',')]
+        return [keyword.strip() for keyword in self._keywords.split(',')]
 
     @keywords.setter
     def keywords(self, values):
@@ -98,13 +99,16 @@ class Action(models.Model):
         actions = cls.objects.all()
 
         result = []
+        # ignore 
+        msg = msg.replace('罚球线', '')
         for action in actions:
             for keyword in action.keywords:
                 pos = msg.rfind(keyword)
                 if pos != -1:
                     result.append((pos, action))
+        
         logger.info("action extract {}")
-        return result
+        return sorted(result, key=lambda x:x[0])
 
 
 class Live(models.Model):
@@ -117,6 +121,40 @@ class Live(models.Model):
 
     def __str__(self):
         return self.live_id
+
+    @classmethod
+    def summary(cls, live_id):
+        api = "http://api.sports.sina.com.cn/?p=live&s=livecast&a=basketball&id={}&dpc=1".format(live_id)
+        resp = requests.get(api)
+        content = resp.content.decode('GBK')
+        c1, c2, s1, s2, *args = content.split(";")
+
+        ## 球员名称，号码，出场时间，首发，投篮，三分，罚篮，进攻篮板，防守篮板，助攻，犯规，抢断，失误，盖帽，快攻，扣篮，被侵，得分
+        team1_summary = re.search("[^']*'(.*)']", s1).groups()[0].split("','")
+        team2_summary = re.search("[^']*'(.*)']", s2).groups()[0].split("','")
+
+        result = {}
+        result['team1'] = {}
+        result['team2'] = {}
+
+        for player_summary in team1_summary:
+            info = {}
+            (info['name'], info['number'], info['MIN'], info['GS'], info['F'], 
+            info['3P'], info['FT'], info['OR'], info['RB'], info['AST'], 
+            info['foul'], info['STL'], info['TO'], info['BS'], info['Fast break'], 
+            _, info['slam dunk'], info['PTS']) =  player_summary.split(",")
+            result['team1'][info['name']] = info
+
+        for player_summary in team2_summary:
+            info = {}
+            (info['name'], info['number'], info['MIN'], info['GS'], info['F'], 
+            info['3P'], info['FT'], info['OR'], info['RB'], info['AST'], 
+            info['foul'], info['STL'], info['TO'], info['BS'], info['Fast break'], 
+            _, info['slam dunk'], info['PTS']) =  player_summary.split(",")
+            result['team2'][info['name']] = info
+
+        return result
+
 
     @property
     def messages(self):
