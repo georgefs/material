@@ -94,7 +94,7 @@ class VideoSceneAdmin(admin.ModelAdmin):
 
         url = reverse('admin:material_video_changelist')
         url += "?id={}".format(obj.video.id)
-        return format_html("<a href='{}'>{}</a>".format(url, text))
+        return format_html("<a Target='_new' href='{}'>{}</a>".format(url, text))
 
     def mp4(self, obj):
         url = "http://104.199.250.233/{}.mp4".format(obj.id)
@@ -128,7 +128,7 @@ class VideoSceneAdmin(admin.ModelAdmin):
         return format_html(html)
 
     def get_queryset(self, request):
-        queryset = super(VideoSceneAdmin, self).get_queryset(request).select_related('video')
+        queryset = super(VideoSceneAdmin, self).get_queryset(request).prefetch_related('video', 'tags')
         ids = request.GET.get('ids', "").strip()
         ids = ids and ids.split(',')
         if ids:
@@ -147,6 +147,10 @@ class CollectionAdmin(admin.ModelAdmin):
     readonly_fields = ('links', 'mp4')
     actions = ('publish',)
     list_filter = ('videos', )
+
+    def get_queryset(self, request):
+        queryset = super(CollectionAdmin, self).get_queryset(request).prefetch_related('videos')
+        return queryset
 
     def links(self, obj):
         html = ""
@@ -176,11 +180,11 @@ class CollectionAdmin(admin.ModelAdmin):
 
     def video_names(self, obj):
         vs = obj.videos.all()
-        return format_html("<br>".join(["<a href='?videos__id__exact={}'>{}</a>".format(v.id, v.name) for v in vs]))
+        return format_html("<br>".join(["<a Target='_new' href='?videos__id__exact={}'>{}</a>".format(v.id, v.name) for v in vs]))
 
     def scenes_link(self, obj):
         scenes = obj.scenes.split(',')
-        return format_html("<a href='/admin/material/videoscene/?ids={}'>{}</a>".format(",".join(scenes), "<br>".join(scenes)))
+        return format_html("<a Target='_new' href='/admin/material/videoscene/?ids={}'>{}</a>".format(",".join(scenes), "<br>".join(scenes)))
 
 
 
@@ -188,6 +192,7 @@ class CollectionAdmin(admin.ModelAdmin):
 class StreamingAdmin(admin.ModelAdmin):
     list_display_links = []
     list_display = ['name', 'status', 'start', 'duration', '_urls']
+    list_editable = ['_urls', 'duration', 'status']
     
 #    list_editable = ['name', 'status', 'duration', 'url']
 #    def get_readonly_fields(self, request, obj=None):

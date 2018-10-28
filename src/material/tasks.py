@@ -5,6 +5,7 @@ from material.models import Video, VideoScene, Collection, Tag, Streaming
 from multiprocessing import Pool
 from django.db import  transaction
 from cba.models import Live
+from material import core
 
 from django.db.models import Count
 
@@ -57,7 +58,7 @@ def live(sid, f=False):
             c+=1
             # time.sleep(1)
             try:
-                job = tagger(video.id)
+                # job = tagger(video.id)
                 pass
             except Exception as e:
                 logger.error(e)
@@ -516,3 +517,7 @@ def sync_collections(ids):
             c.status = 'fail'
         finally:
             c.save()
+
+@app.task
+def sync_streaming(streaming_id):
+    core.upload_streaming_video(streaming_id)
