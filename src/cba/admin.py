@@ -4,9 +4,10 @@ from cba.models import Player, Team, Action, Live
 # Register your models here.
 
 class PlayerAdmin(admin.ModelAdmin):
-    list_display = ['name',  '_nick_names', 'team']
-    list_editable = ["_nick_names"]
+    list_display = ['name', 'is_star',  '_nick_names', 'team']
+    list_editable = ["_nick_names", "is_star"]
     search_fields = ('name', '_nick_names' )
+    list_filter = ['team']
 
 
 class TeamAdmin(admin.ModelAdmin):

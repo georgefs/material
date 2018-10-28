@@ -63,7 +63,7 @@ def detect(img):
     for p in points:
         p = re.sub("[,.;‘)}:]", "", p).replace('A', '4').replace('Z', '2').replace('O', '0').replace('B', '8')
         tmp.append(p)
-    print(points)
+    print(points, 'detect')
     return tuple(tmp)
 
 # 確認 logo 

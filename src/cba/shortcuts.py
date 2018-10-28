@@ -113,12 +113,13 @@ def tagger(video_id, video_end=False):
         event = info.get('event', {})
         try:
             p0, p1 = int(point[0]) - int(old_point[0]), int(point[1]) - int(old_point[1])
+            old_point = point
         except Exception as e:
             logger.warning("point cacular error {} {} by {}".format(point, old_point, e))
-        finally:
-            old_point = point
+            continue
+
         point_change_time = info['time']
-        msg = event.get('messages', "")
+        msg = event.get('messages', "") or ""
         section = event.get('section', section)
         section = section > 4 and 4 or section
         tags = []
@@ -126,14 +127,17 @@ def tagger(video_id, video_end=False):
         tags.append(section_tag)
         score_action = ""
         event_meta['section'] = section
+        if int(point[0]) == 0 and int(point[1]) == 0:
+            score_action = "跳球"
+            event_tag, _ = Tag.objects.get_or_create(name="{}_event".format(score_action))
+            tags.append(event_tag)
         
         if bool(p0) ^ bool(p1):
             score = p0 or p1
             score_action = None
-
             if score == 1:
                 score_action = "罚球" 
-            elif score == 3:
+            elif score == 3 and  "加罚也中" not in msg:
                 score_action = "三分"
             else:
                 score_action = event.get('action')
@@ -163,7 +167,6 @@ def tagger(video_id, video_end=False):
                 tags.append(score_team_tag)
             event_meta['score_team'] = score_team
 
-
         match_key = json.dumps(point)
         videoscene_id = matched.get(match_key, None)
 
@@ -189,16 +192,19 @@ def tagger(video_id, video_end=False):
         videoscene.tags.add(*tags)
 
         matched[match_key] = videoscene.id
-
+    processed_sections = meta.get('processed_sections', [])
     for change_section_event in change_sections:
         if change_section_event['section'] not in [2, 3, 4]:
             continue
         print(video.id, change_section_event['section'] - 1, change_section_event['point'])
         create_collections(video.id, change_section_event['section'] - 1, change_section_event['point'])
+        processed_sections.append(change_section_event['section'] - 1)
 
     if video_end:
         create_collections(video.id, 4, point)
+        processed_sections.append(4)
 
+    meta['processed_sections'] = list(set(processed_sections))
     meta['matched'] = matched
     meta['logs'] = logs
     video.meta = json.dumps(meta)
@@ -220,7 +226,7 @@ def create_collections(vid, section, point=None):
     section = str(section)
 
     processed_sections = meta.get('processed_sections', [])
-    if str(section) in processed_sections:
+    if int(section) in processed_sections:
         return
 
 #    logs = meta['logs']
@@ -387,18 +393,18 @@ def create_collections(vid, section, point=None):
         full_score_king = score_king_collection(full_scenes, section_name)
         stars = star_collections(full_scenes)
 
-    processed_sections.append(section)
-
-    meta['processed_sections'] = processed_sections
-    v.meta = json.dumps(meta)
-    v.save()
+#    processed_sections.append(section)
+#
+#    meta['processed_sections'] = processed_sections
+#    v.meta = json.dumps(meta)
+#    v.save()
     cs = Collection.objects.filter(status='init')
     #sync_collections.delay([c.id for c in cs])
 
 
     hooks = [
-        "https://hooks.slack.com/services/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",
-        "https://hooks.slack.com/services/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"
+        #"https://hooks.slack.com/services/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",
+        #"https://hooks.slack.com/services/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"
     ]
     data = {"text": "{} 第{}節 錦集完成 http://104.199.250.233:8000/admin/material/collection/?videos__id__exact={}".format(v.name, section, v.id)}
     for h in hooks:
@@ -472,7 +478,7 @@ def split_by_team(qs):
         try:
             score_team = meta['score_team']
         except:
-            import pdb;pdb.set_trace()
+            pass
         if not score_team:
             continue
         data = teams.get(score_team, [])
@@ -480,3 +486,22 @@ def split_by_team(qs):
         teams[score_team] = data
     return teams
 
+
+def daemon_tagger(vid):
+    import time
+    while True:
+        tagger(vid)
+        time.sleep(10)
+
+def retagger(vid):
+    v = Video.objects.get(pk=vid)
+    meta = json.loads(v.meta)
+    if meta.get('processed_sections'):
+        del meta['processed_sections']
+    if meta.get('matched'):
+        del meta['matched']
+    v.meta = json.dumps(meta)
+    v.save()
+    Collection.objects.filter(videos__id=vid).delete()
+    VideoScene.objects.filter(video__id=vid).delete()
+    tagger(vid, True)

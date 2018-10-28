@@ -100,7 +100,7 @@ class Action(models.Model):
 
         result = []
         # ignore 
-        msg = msg.replace('罚球线', '')
+        msg = msg.replace('罚球线', '').replace('二罚不中', '').replace('两罚不中', '')
         for action in actions:
             for keyword in action.keywords:
                 pos = msg.rfind(keyword)
