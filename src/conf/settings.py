@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'material',
     'django_extensions',
     'cba',
+    'debug_toolbar',
 ]
 
 MIDDLEWARE = [
@@ -57,6 +58,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
 ]
 
 ROOT_URLCONF = 'conf.urls'
@@ -164,3 +166,5 @@ MATERIAL_URL = 'http://104.199.250.233/'
 
 
 MATERIAL_VIDEO_PATH = os.path.join(STATIC_ROOT, "streaming")
+
+INTERNAL_IPS = ['61.61.28.9']
