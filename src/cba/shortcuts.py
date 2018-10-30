@@ -201,7 +201,7 @@ def tagger(video_id, video_end=False):
         processed_sections.append(change_section_event['section'] - 1)
 
     if video_end:
-        create_collections(video.id, 4, point)
+        create_collections(video.id, 4, key)
         processed_sections.append(4)
 
     meta['processed_sections'] = list(set(processed_sections))
