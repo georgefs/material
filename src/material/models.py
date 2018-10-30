@@ -13,6 +13,8 @@ from datetime import timedelta
 import time
 from django.db import  transaction
 import logging
+import urllib.request
+import shutil
 logger = logging.getLogger(__name__)
 # Create your models here.
 
@@ -253,9 +255,22 @@ class Collection(models.Model):
         vs = [v['file_path'] for v in scenes]
         source = "|".join(vs)
         tempfolder = tempfile.mkdtemp()
+        index = ""
+        index_path = os.path.join(tempfolder, "index")
+        idx = 0
+        for scene in scenes:
+            file_name = os.path.join(tempfolder, "{}.ts".format(idx))
+            urllib.request.urlretrieve(scene['file_path'], file_name)
+            index += "file {}\n".format(file_name)
+            idx += 1
+
+        with open(index_path, 'w+') as f:
+            f.write(index)
+
         output_path = os.path.join(tempfolder, "video.mp4")
 
-        cmd = 'ffmpeg -protocol_whitelist concat,file,http,https,tcp,tls -i concat:{source} -vcodec copy -acodec copy {output_path}'.format(source=source, output_path=output_path).split()
+        # cmd = 'ffmpeg -protocol_whitelist concat,file,http,https,tcp,tls -i concat:{source} -vcodec copy -acodec copy {output_path}'.format(source=source, output_path=output_path).split()
+        cmd = 'ffmpeg -safe 0 -f concat -i {index_path} -c copy {output_path}'.format(index_path=index_path, output_path=output_path).split()
 
         proc = subprocess.Popen(cmd)
         proc.wait()
@@ -276,4 +291,5 @@ class Collection(models.Model):
 
         resp = highlight.upload(data)
         self.save()
+        shutil.rmtree(tempfolder)
         return resp
