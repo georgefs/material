@@ -222,13 +222,14 @@ class Collection(models.Model):
     videos = models.ManyToManyField(Video)
 
     def save(self, *args, **kwargs):
+        if not self.status:
+            self.status = 'init'
+
+        super(Collection, self).save(*args, **kwargs)
         if self.scenes.strip():
             video__ids = VideoScene.objects.filter(id__in=self.scenes.split(',')).values('video').distinct()
             video__ids = [v['video'] for v in video__ids]
             self.videos.add(*list(Video.objects.filter(id__in=video__ids)))
-        if not self.status:
-            self.status = 'init'
-        super(Collection, self).save(*args, **kwargs)
 
     @property
     def m3u8(self):
