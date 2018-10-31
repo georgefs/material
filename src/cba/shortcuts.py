@@ -5,7 +5,6 @@ import logging
 import json
 from . import video_helper
 from collections import Counter
-from material import cba
 import requests
 logger = logging.getLogger(__name__)
 
@@ -92,7 +91,7 @@ def tagger(video_id, video_end=False):
         event_meta['score_team'] = None
         event_meta['score_player'] = None
         event_meta['score'] = 0
-        if point_counter.get(point, 0) < 4:
+        if point_counter.get(point, 0) < 4 and not score_mappings.get('event', None):
             flag = True
             continue
         try:
