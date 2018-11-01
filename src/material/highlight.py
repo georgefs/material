@@ -14,7 +14,7 @@ def login():
     login_info['password'] = "test1234"
     login_info.update({"csrfmiddlewaretoken": session.cookies['csrftoken']})
 
-    resp = session.post('http://35.229.222.200:8000/api-auth/login/?next=/studio/videos/', data=login_info)
+    resp = session.post('http://35.194.171.95:8000/api-auth/login/?next=/studio/videos/', data=login_info)
     print(resp)
     return session
 
