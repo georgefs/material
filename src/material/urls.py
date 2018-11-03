@@ -21,6 +21,7 @@ from django.contrib.auth.decorators import login_required
 urlpatterns = [
     re_path('video/(?P<vid>\d+).m3u8', views.video_m3u8, name="video_m3u8"),
     re_path('scene/(?P<vid>\d+).m3u8', views.scene_m3u8, name="scene_m3u8"),
+    re_path('review_scene', views.ReviewVideoSceneView.as_view(), name="review_videoscene"),
     re_path('collection/(?P<cid>\d+).m3u8', views.collection_m3u8, name="collection_m3u8"),
     re_path('video/(?P<vid>\d+)/preview', views.video_preview, name="video_preview"),
     re_path('video/(?P<vid>\d+)/slice', login_required(views.VideoSlinceView.as_view()), name="video_slice"),

@@ -222,7 +222,7 @@ def process_queryset(qs):
 
 def create_collections(vid, section, point=None):
     v = Video.objects.get(pk=vid)
-    queryset = VideoScene.objects.filter(video=v).select_related()
+    queryset = VideoScene.objects.filter(video=v).exclude(status='reject').select_related()
     meta = json.loads(v.meta)
     home_team = meta['home_team']
     away_team = meta['away_team']
