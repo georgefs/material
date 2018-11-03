@@ -56,7 +56,7 @@ def detect(img):
     #display(il)
     #display(ir)
     #img_hashs = (imagehash.average_hash(il, hash_size=10), imagehash.average_hash(ir, hash_size=10))
-    il, ir = preprocess(il), preprocess(ir)
+    # il, ir = preprocess(il), preprocess(ir)
     points = pytesseract.image_to_string(il, config='--psm 7 -l number'),pytesseract.image_to_string(ir, config='--psm 7 -l number')
 
     tmp = []
