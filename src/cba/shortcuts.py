@@ -173,17 +173,17 @@ def tagger(video_id, video_end=False):
         event_meta = json.dumps(event_meta)
         if not videoscene_id:
             videoscene = VideoScene()
+            videoscene.end = point_change_time 
         else:
             videoscene = VideoScene.objects.get(pk=videoscene_id)
 
         videoscene.text = msg
         videoscene.video = video
-        videoscene.end = point_change_time 
         videoscene.meta = event_meta
         if score_action == '罚球':
-            videoscene.start = point_change_time - 29
+            videoscene.start = videoscene.end - 29
         else:
-            videoscene.start = point_change_time - 5
+            videoscene.start = videoscene - 5
         videoscene.save()
 
         tag, _ = Tag.objects.get_or_create(name="new")
