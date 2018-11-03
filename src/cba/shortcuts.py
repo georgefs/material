@@ -64,15 +64,15 @@ def tagger(video_id, video_end=False):
 
     logs = [v for v in time_mapping.items()]
         
-    point_counter = Counter([tuple(v) for v in time_mapping.values() if v])
+    point_counter = Counter([(int(v[0]), int(v[1])) for v in time_mapping.values() if v and v[0].isnumeric() and v[1].isnumeric()])
     point_frame = [l[0] for l in logs if l[1]]
     none_point_range = [v for v in zip(point_frame, point_frame[1:]) if v[1] - v[0] > 4]
-    score_mappings = dict(sorted([(tuple(l[1]), {"time": int(l[0])*2}) for l in time_mapping.items() if l[1]], key=lambda x:-x[1]['time']))
+    score_mappings = dict(sorted([(tuple((int(l[1][0]), int(l[1][1]))), {"time": int(l[0])*2}) for l in time_mapping.items() if l[1] and l[1][0].isnumeric() and l[1][1].isnumeric()], key=lambda x:-x[1]['time']))
 
     change_sections = []
     for live_event in live_events(live_id):
         if live_event['type'] == 'score':
-            key = tuple([str(v) for v in live_event['point']])
+            key = tuple([int(v) for v in live_event['point']])
             try:
                 score_mappings[key]['event'] = live_event
             except Exception as e:
@@ -81,35 +81,41 @@ def tagger(video_id, video_end=False):
             change_sections.append(live_event)
 
     point_infos = [v for v in sorted(score_mappings.items(), key=lambda x:x[1]['time'])]
-
     old_point = (0, 0)
     section = 1
-    flag = False
-    for idx in range(len(point_infos)):
-        point, info = point_infos[idx]
+    for idx, point_info in enumerate(point_infos):
+        point, info = point_info
         event_meta = {}
         event_meta['score_team'] = None
         event_meta['score_player'] = None
         event_meta['score'] = 0
-        if point_counter.get(point, 0) < 4 and not score_mappings.get('event', None):
-            flag = True
-            continue
-        try:
-            p_n = [int(p) for p in point_infos[idx+1][0]]
-            if flag:
-                p_p = [int(p) for p in point_infos[idx-2][0]]
-            else:
-                p_p = [int(p) for p in point_infos[idx-1][0]]
 
-            p = [int(p) for p in point]
-            if not (4 > (sum(p_n) - sum(p)) > 0 or 4 > (sum(p) - sum(p_p)) > 0):
-                flag = True
+
+        p = point_infos[idx][0]
+        if idx > 1 and idx < len(point_infos) - 1:
+            p_n = point_infos[idx+1][0]
+            p_p = old_point
+            p_c = point_counter.get(p, 0)
+            # 連號
+            if  (4 > (sum(p_n) - sum(p)) > 0) and (4 > (sum(p) - sum(p_p)) > 0):
+                pass
+            # 前連 分數對, 但是下一個斷訊
+            elif not (4 > (sum(p_n) - sum(p)) > 0) and point_counter.get(p, 0) > 3 and (4 > (sum(p) - sum(p_p)) > 0):
+                pass
+            # 後連 分數對, 但是前面斷訊
+            elif not (4 > (sum(p) - sum(p_p)) > 0) and point_counter.get(p, 0) > 3 and (4 > (sum(p_n) - sum(p)) > 0):
+                old_point = p
                 continue
-            flag = False
-        except Exception as e:
-            pass
+            # 數字跳號 數字錯
+            elif not (4 > (sum(p) - sum(p_p)) > 0) and not (4 > (sum(p_n) - sum(p)) > 0):
+                continue
+            else: # 不管前連或者後連, 數字本身採樣不足, 不採證
+                continue
+        elif point_counter.get(p, 0) < 4:
+            continue
         
         event = info.get('event', {})
+
         try:
             p0, p1 = int(point[0]) - int(old_point[0]), int(point[1]) - int(old_point[1])
             old_point = point
@@ -195,7 +201,6 @@ def tagger(video_id, video_end=False):
     for change_section_event in change_sections:
         if change_section_event['section'] not in [2, 3, 4]:
             continue
-        print(video.id, change_section_event['section'] - 1, change_section_event['point'])
         create_collections(video.id, change_section_event['section'] - 1, change_section_event['point'])
         processed_sections.append(change_section_event['section'] - 1)
 
