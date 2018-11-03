@@ -176,9 +176,16 @@ class VideoScene(models.Model):
     text = models.CharField(max_length=1024)
     start = models.IntegerField()
     end = models.IntegerField()
-    preview_url = models.URLField(null=True)
+    preview_url = models.URLField(null=True, blank=True)
     tags = models.ManyToManyField(Tag)
     meta = models.TextField()
+
+    status = (
+        ('init', 'init'),
+        ('approve', 'approve'),
+        ('reject', 'reject')
+    )
+    status = models.CharField(choices=status, default='init', max_length=256)
 
     def __unicode__(self):
         return self.text
@@ -227,7 +234,7 @@ class Collection(models.Model):
 
         super(Collection, self).save(*args, **kwargs)
         if self.scenes.strip():
-            video__ids = VideoScene.objects.filter(id__in=self.scenes.split(',')).values('video').distinct()
+            video__ids = VideoScene.objects.filter(id__in=self.scenes.split(',')).exclude(status="reject").values('video').distinct()
             video__ids = [v['video'] for v in video__ids]
             self.videos.add(*list(Video.objects.filter(id__in=video__ids)))
 

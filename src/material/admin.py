@@ -73,12 +73,12 @@ class VideoSceneAdmin(admin.ModelAdmin):
     class Media:
         js = ('https://cdn.jsdelivr.net/npm/clappr@latest/dist/clappr.min.js',)
 
-    list_display = ('id', 'tag_names', 'text', 'video__name', 'links', 'edit', 'mp4', 'start')
+    list_display = ('id', 'status', 'tag_names', 'text', 'video__name', 'links', 'edit', 'mp4', 'start')
 
     list_filter = ('tags', IdsFilter,)
     search_fields = ('text', 'video__name' )
     actions = ('create_collection', )
-    readonly_fields = ('links', 'edit', 'mp4')
+    readonly_fields = ('links', 'edit', 'mp4', 'status')
 
 
     def edit(self, obj):
