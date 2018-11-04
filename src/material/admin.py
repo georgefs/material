@@ -75,7 +75,7 @@ class VideoSceneAdmin(admin.ModelAdmin):
 
     list_display = ('id', 'status', 'tag_names', 'text', 'video__name', 'links', 'edit', 'mp4', 'start')
 
-    list_filter = ('tags', IdsFilter,)
+    list_filter = ('tags', IdsFilter, 'status')
     search_fields = ('text', 'video__name' )
     actions = ('create_collection', )
     readonly_fields = ('links', 'edit', 'mp4', 'status')
@@ -193,6 +193,7 @@ class StreamingAdmin(admin.ModelAdmin):
     list_display_links = []
     list_display = ['name', 'status', 'start', 'duration', '_urls']
     list_editable = ['_urls', 'duration', 'status']
+    search_fields = ['name', '_urls']
     
 #    list_editable = ['name', 'status', 'duration', 'url']
 #    def get_readonly_fields(self, request, obj=None):

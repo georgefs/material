@@ -256,7 +256,7 @@ def get_uncheck_video(block_time=300):
             try:
                 value = PubSub.sub('uncheck_videoscene')
             except:
-                uncheck_videoscenes = VideoScene.objects.filter(status='init').values('id')
+                uncheck_videoscenes = VideoScene.objects.filter(status='init').exclude(tags__name="罚球_event").values('id')[:1000]
                 uncheck_videoscene_ids = [v['id'] for v in uncheck_videoscenes if not cache.get("lock_{}".format(v['id']), False)]
                 uncheck_videoscene_ids = list(set(uncheck_videoscene_ids))
                 value = None
@@ -299,7 +299,7 @@ class ReviewVideoSceneView(View):
                    var start = document.getElementById('start').value;
                    var url = m3u8_url + "?duration=" + start + "~" + end;
                    console.log(url);
-                   player.configure({"source": url});
+                   player.configure({"source": url, "autoPlay": true});
                    player.play()
                 }
             </script>
@@ -334,11 +334,12 @@ class ReviewVideoSceneView(View):
     @csrf_exempt
     def post(self, request):
         response = redirect("review_videoscene")
-        vid = request.COOKIES["checking"]
-        vc = VideoScene.objects.get(pk=vid)
-        vc.status = request.POST.get("status")
-        vc.start = request.POST.get("start")
-        vc.end = request.POST.get("end")
-        vc.save()
-        response.delete_cookie("checking")
+        vid = request.COOKIES.get("checking", None)
+        if not vid:
+            vc = VideoScene.objects.get(pk=vid)
+            vc.status = request.POST.get("status")
+            vc.start = request.POST.get("start")
+            vc.end = request.POST.get("end")
+            vc.save()
+            response.delete_cookie("checking")
         return response
