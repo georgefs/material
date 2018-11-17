@@ -9,7 +9,7 @@ from django.middleware import csrf
 from django.shortcuts import redirect
 from django.contrib.auth.decorators import login_required
 from material.hls import M3U8
-
+from django.shortcuts import render
 
 # Create your views here.
 
@@ -169,7 +169,7 @@ class VideoSlinceView(View):
 
         template = '<a href="#" onclick="player.seek({});"><img src="{}" width="200px">'
         start = 0
-        for scene in obj.m3u8.scenes[::5]:
+        for scene in obj.m3u8.scenes:
             img = "{}.jpg".format(scene['file_path'])
             start = scene['start']
             html += template.format(start, img)
@@ -271,71 +271,31 @@ from django.core.cache import cache
 
 class ReviewVideoSceneView(View):
     def get(self, request):
-        response = HttpResponse()
 
         if not request.COOKIES.get('checking', None):
             vid = get_uncheck_video()
-            response.set_cookie("checking", vid, 300)
         else:
             vid = request.COOKIES['checking']
 
         vc = VideoScene.objects.get(pk=vid)
         m3u8_url = reverse('video_m3u8', kwargs={'vid': vc.video.id})
-        html = '''<head>
-            <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clappr@latest/dist/clappr.min.js"></script>
-            <script>window.clappr = Clappr;</script>
-            <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clappr-playback-rate-plugin@0.4.0/lib/clappr-playback-rate-plugin.min.js"></script>
-            <script>window.PlaybackRatePlugin = window['clappr-playback-rate-plugin'].default</script>
-            <script>
-                function shift_time(second){
-                   var end = document.getElementById('end');
-                   var start = document.getElementById('start');
-                   end.value = parseInt(end.value) + parseInt(second);
-                   start.value = parseInt(start.value) + parseInt(second);
-                   render()
-                }
-                function render(){
-                   var end = document.getElementById('end').value;
-                   var start = document.getElementById('start').value;
-                   var url = m3u8_url + "?duration=" + start + "~" + end;
-                   console.log(url);
-                   player.configure({"source": url, "autoPlay": true});
-                   player.play()
-                }
-            </script>
-        </head>'''
-        html += '''
-        <body>
-	    <b>{name}</b>
-            <div id="player"></div>
-            <p>{tags}</p>
-            <a href="#" onclick="shift_time(-2)">前移2秒</a>
-            <a href="#" onclick="shift_time(+2)">後移2秒</a>
-            <form method='post' action=''>
-               <input type='hidden' name='start' id='start' value='{st}'>
-               <input type='hidden' name='end' id='end' value='{ed}'>
-               <input type='hidden' name="csrfmiddlewaretoken" value="{csrf}">
-               <input type='submit' name="status" value='approve'>
-               <input type='submit' name="status" value='reject'>
-            </form>
-
-            <script>
-                 var m3u8_url = "{m3u8_url}";
-                 var player = new Clappr.Player({{source: "", parentId: "#player", plugins: {{'core': [PlaybackRatePlugin]}}}});
-                 render()
-            </script>
-
-        </body>
-        '''.format(m3u8_url=m3u8_url, st=vc.start, ed=vc.end, csrf=csrf.get_token(request), name=vc.text, tags=", ".join([t.name for t in vc.tags.all()]))
-
-        response.content = html
+        
+        data = {
+            "m3u8_url" : m3u8_url,
+            "tags": [t.name for t in vc.tags.all()],
+            "st": vc.start,
+            "ed": vc.end,
+            "name": vc.text
+        }
+        response =  render(request, "material/review.html", data)
+        response.set_cookie("checking", vid, 300)
         return response
 
     @csrf_exempt
     def post(self, request):
         response = redirect("review_videoscene")
         vid = request.COOKIES.get("checking", None)
-        if not vid:
+        if vid:
             vc = VideoScene.objects.get(pk=vid)
             vc.status = request.POST.get("status")
             vc.start = request.POST.get("start")

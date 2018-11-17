@@ -58,3 +58,13 @@ class PubSub:
             cache.set(topic_key, v)
             return s
 
+    @staticmethod
+    def get_len(topic_key):
+        return len(cache.get(topic_key, []))
+
+    @staticmethod
+    def read(topic_key, length=-1):
+        if length != -1:
+            return cache.get(topic_key, [])
+        else:
+            return cache.get(topic_key, [])[:length]
