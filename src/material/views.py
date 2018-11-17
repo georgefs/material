@@ -247,14 +247,16 @@ class SceneEditorView(View):
         v.save()
         return self.get(request, vid)
 
+from cache_pullqueue import PullQueue, CacheLock
+from django.core.cache import cache
 
 def get_uncheck_video(block_time=300):
     try:
-        value = PubSub.sub('uncheck_videoscene')
+        value = PullQueue.pull('uncheck_videoscene')
     except:
         with CacheLock('fill_queue'):
             try:
-                value = PubSub.sub('uncheck_videoscene')
+                value = PullQueue.pull('uncheck_videoscene')
             except:
                 uncheck_videoscenes = VideoScene.objects.filter(status='init').exclude(tags__name="罚球_event").values('id')[:1000]
                 uncheck_videoscene_ids = [v['id'] for v in uncheck_videoscenes if not cache.get("lock_{}".format(v['id']), False)]
@@ -262,12 +264,9 @@ def get_uncheck_video(block_time=300):
                 value = None
                 if uncheck_videoscene_ids:
                     value, queued = uncheck_videoscene_ids[0], uncheck_videoscene_ids[1:]
-                    PubSub.pub_multi('uncheck_videoscene', uncheck_videoscene_ids[1:], unique=True)
+                    PullQueue.push_multi('uncheck_videoscene', uncheck_videoscene_ids[1:], unique=True)
     cache.set("lock_{}".format(value), True, block_time)
     return value
-
-from cache_pubsub import PubSub, CacheLock
-from django.core.cache import cache
 
 class ReviewVideoSceneView(View):
     def get(self, request):
