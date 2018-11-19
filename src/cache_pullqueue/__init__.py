@@ -5,4 +5,4 @@
 #
 # Distributed under terms of the MIT license.
 
-from .core import PubSub, CacheLock
+from .core import PullQueue, CacheLock

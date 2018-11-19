@@ -25,16 +25,16 @@ class CacheLock:
         cache.delete(self.lock_name)
 
 
-class PubSub:
+class PullQueue:
     @staticmethod
-    def pub(topic_key, value, unique=False):
+    def push(topic_key, value, unique=False):
         with CacheLock(topic_key) as v:
             if not(unique and value in v):
                 v.append(value)
             cache.set(topic_key, v)
 
     @staticmethod
-    def pub_multi(topic_key, values, unique=False):
+    def push_multi(topic_key, values, unique=False):
         with CacheLock(topic_key) as v:
             for value in values:
                 if not(unique and values in v):
@@ -42,14 +42,14 @@ class PubSub:
             cache.set(topic_key, v)
 
     @staticmethod
-    def sub(topic_key):
+    def pull(topic_key):
         with CacheLock(topic_key) as v:
             s, v = v[:1], v[1:]
             cache.set(topic_key, v)
             return s[0]
 
     @staticmethod
-    def sub_multi(topic_key, length=-1):
+    def pull_multi(topic_key, length=-1):
         with CacheLock(topic_key) as v:
             if length != -1:
                 s, v = v[:length], v[length:]
