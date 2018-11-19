@@ -1,5 +1,5 @@
 from django.contrib import admin
-from cba.models import Player, Team, Action, Live
+from cba.models import Player, Team, Action, Live, StatTeam, StatPlayer, StatPlayDetail, StatEvent
 
 # Register your models here.
 
@@ -27,3 +27,7 @@ admin.site.register(Player, PlayerAdmin)
 admin.site.register(Team, TeamAdmin)
 admin.site.register(Action, ActionAdmin)
 admin.site.register(Live, LiveAdmin)
+admin.site.register(StatTeam)
+admin.site.register(StatPlayer)
+admin.site.register(StatPlayDetail)
+admin.site.register(StatEvent)

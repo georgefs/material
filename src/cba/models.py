@@ -6,7 +6,6 @@ import pytz
 import requests
 from django.db import transaction
 import re
-
 logger = logging.getLogger(__name__)
 # Create your models here.
 
@@ -258,6 +257,153 @@ class Live(models.Model):
 
             ## change section
             if old_section != base['section']:
+                info = {}
+                info['type'] = "change_section"
+                info.update(base)
+                old_section = base['section']
+                yield info
+
+from . import stat
+
+class StatTeam(models.Model):
+    location = models.CharField(max_length=1024)
+    nick_name = models.CharField(max_length=1024)
+    abbreviation = models.CharField(max_length=1024)
+    id = models.CharField(max_length=1024, primary_key=True)
+
+class StatPlayer(models.Model):
+    id = models.CharField(max_length=1024, primary_key=True)
+    team = models.ForeignKey(StatTeam, on_delete=models.CASCADE)
+    first_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100)
+    info = models.TextField(null=True, blank=True)
+
+    @property
+    def name(self):
+        return "{}{}".format(self.last_name, self.first_name)
+
+    @classmethod
+    def sync(cls):
+        players = stat.get_players()
+        for p in players:
+            team_info = p['team']
+            team, is_create = StatTeam.objects.get_or_create(
+                    id=team_info['teamId'],
+                    location=team_info['location'],
+                    nick_name=team_info['nickname'],
+                    abbreviation=team_info['abbreviation']
+            )
+            cls.objects.get_or_create(
+                id=p['playerId'],
+                first_name=p['firstName'],
+                last_name=p['lastName'],
+                info=json.dumps(p),
+                team=team
+            )
+
+
+class StatPlayDetail(models.Model):
+    event_id = models.CharField(max_length=1024)
+    detail_id = models.CharField(max_length=1024)
+    event = models.CharField(max_length=1024)
+    detail = models.CharField(max_length=2048)
+
+    class Meta:
+        unique_together = (("event_id", "detail_id"),)
+    
+    @property
+    def name(self):
+        if "Free Throw" in self.detail:
+            return "罚球"
+        elif "Dunk" in self.detail:
+            return "灌篮"
+        elif "Tip Shot" in self.detail or "Finger Roll" in self.detail:
+            return "上篮"
+        else:
+            return "其他事件"
+
+    @classmethod
+    def sync(cls):
+        for event in stat.get_play_events():
+            try:
+                cls.objects.get_or_create(
+                    detail_id=event['playDetail']['playDetailId'],
+                    detail=event['playDetail']['name'],
+                    event=event['name'],
+                    event_id=event['playEventId']
+                )
+            except:
+                import pdb;pdb.set_trace()
+
+class StatEvent(models.Model):
+    id = models.CharField(max_length=1024, primary_key=True)
+    _messages = models.TextField(null=True, blank=True)
+    home_team = models.ForeignKey(StatTeam, on_delete=models.CASCADE, related_name="home_team", null=True, blank=True)
+    away_Team = models.ForeignKey(StatTeam, on_delete=models.CASCADE, related_name="away_team", null=True, blank=True)
+    updated = models.DateTimeField(auto_now=True)
+
+
+    @property
+    def messages(self):
+        if self._messages:
+            messages = json.loads(self._messages)
+        else:
+            messages = []
+        if (datetime.utcnow().replace(tzinfo=pytz.utc) - self.updated).total_seconds() > 30:
+            self.update_messages()
+        return messages
+
+    @messages.setter
+    def messages(self, values):
+        self._messages = json.dumps(values)
+
+    def update_messages(self):
+        teams, pbps = stat.get_pbps(self.id)
+        self.home_team = StatTeam.objects.get(pk=teams[0]['teamId'])
+        self.away_team = StatTeam.objects.get(pk=teams[1]['teamId'])
+        self.messages = pbps
+        self.save()
+
+    @classmethod
+    def live_events(cls, live_id):
+        live, _ = cls.objects.get_or_create(pk=live_id)
+        messages = live.messages
+
+        point_mappings = {}
+        tmp = []
+        old_section = 0
+        for message in messages:
+            # material message
+            try:
+                point = (int(message['homeScore']), int(message['visitorScore']))
+                team1 = live.home_team
+                team2 = live.away_team
+            except:
+                continue
+
+            #  live message
+            base = {}
+            base['team1'] = team1
+            base['team2'] = team2
+            base['section'] = message['period']
+            base['point'] = point
+            base['message'] = message['playText']
+            base['players'] = message['players']
+            base['playEvent'] = message['playEvent']
+
+            ## point event
+            if  message.get('pointsScored'):
+                info = {}
+                info['type'] = "score"
+
+                info['score_team'] = StatTeam.objects.get(pk=message['teamId'])
+                info['score_point'] = message['pointsScored']
+
+                info.update(base)
+                yield info
+
+            ## change section
+            if message['playEvent']['playEventId'] == 15:
                 info = {}
                 info['type'] = "change_section"
                 info.update(base)
